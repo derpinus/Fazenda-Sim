@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fazenda Sim - Mapa Expandido v0.7</title>
+    <title>Fazenda Sim - Mapa 24x24 v0.8</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <h1>🏰 Fazenda Sim - Mapa Expandido 16x16</h1>
+    <h1>🏰 Fazenda Sim - Mapa Expandido 24x24</h1>
 
     <div id="game-container">
-        <!-- Canvas alargado para 1100x700 para suportar o mapa expandido -->
-        <canvas id="gameCanvas" width="1100" height="700"></canvas>
+    <!-- Canvas alargado para 1600x800 para suportar o mapa 24x24 sem cortes -->
+    <canvas id="gameCanvas" width="1600" height="800"></canvas>
         
         <div id="ui">
             <div class="stat-group">
@@ -20,7 +20,7 @@
                 <div class="stat-item">🎒 Max: <span id="maxCap">5</span></div>
             </div>
             <div class="stat-group">
-                <div class="stat-item">🌱 Sementes: <span id="seeds">2</span></div>
+                <div class="stat-item">🌱 Sementes: <span id="seeds">4</span></div>
                 <div class="stat-item">🌾 Trigo: <span id="wheat">0</span></div>
             </div>
             <div class="stat-group">

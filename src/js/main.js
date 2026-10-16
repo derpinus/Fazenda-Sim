@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const player = {
-    x: 8, y: 8, // Começa no centro do mapa 16x16
+    x: 8, y: 8,
     vx: 0, vy: 0,
     maxSpeed: 0.018,
     accel: 0.0035,
@@ -17,7 +17,6 @@ const keys = {};
 let timeOfDay = 0;
 const DAY_LENGTH = 2000;
 
-// Efeitos Sonoros com Web Audio API
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTone(freq, type, duration) {
@@ -41,9 +40,8 @@ function playSound(action) {
     if (action === 'animal') { playTone(150, 'sawtooth', 0.25); }
 }
 
-// Entidades posicionadas no mapa 16x16
-const market = { x: 7, y: 7 };         // Mercado centralizado na praça
-const cheesePress = { x: 8, y: 7 };    // Prensa de queijo ao lado do mercado
+const market = { x: 7, y: 7 };
+const cheesePress = { x: 8, y: 7, status: 'vazia', timer: 0 }; // <--- Adicionado status e timer aqui
 
 const animals = [
     new Animal('cow', 2, 12, cowPen),
@@ -137,6 +135,19 @@ function update() {
     player.x += player.vx;
     player.y += player.vy;
 
+    // --- CÂMARA DINÂMICA ANCORADA NA BASE ISOMÉTRICA ---
+    const targetIsoX = (player.x - player.y) * (TILE_WIDTH / 2);
+    const targetIsoY = (player.x + player.y) * (TILE_HEIGHT / 2);
+
+    // Ajustamos o offset vertical para centrar o jogador ligeiramente acima do terço inferior do ecrã,
+    // dando a sensação de que o mapa se abre para cima (a partir da ponta de baixo)
+    const desiredOriginX = (canvas.width / 2) - targetIsoX;
+    const desiredOriginY = (canvas.height * 0.55) - targetIsoY;
+
+    ORIGIN_X += (desiredOriginX - ORIGIN_X) * 0.1;
+    ORIGIN_Y += (desiredOriginY - ORIGIN_Y) * 0.1;
+    // ----------------------------------------------------
+
     player.isMoving = currentSpeed > 0.0015;
     if (player.isMoving) {
         player.animTimer += 0.05;
@@ -145,7 +156,6 @@ function update() {
         player.animTimer = 0;
     }
 
-    // Limites atualizados para MAP_SIZE = 16
     player.x = Math.max(0, Math.min(MAP_SIZE - 1, player.x));
     player.y = Math.max(0, Math.min(MAP_SIZE - 1, player.y));
 
@@ -231,14 +241,12 @@ function updateUI() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Grelha do mapa expandida para MAP_SIZE (16x16)
     for (let x = 0; x < MAP_SIZE; x++) {
         for (let y = 0; y < MAP_SIZE; y++) {
             let topColor = '#4ade80';
             let sideColor = '#166534';
             let accentColor = '#14532d';
             
-            // Texturas dos currais
             if ((x >= cowPen.minX && x <= cowPen.maxX && y >= cowPen.minY && y <= cowPen.maxY) ||
                 (x >= sheepPen.minX && x <= sheepPen.maxX && y >= sheepPen.minY && y <= sheepPen.maxY)) {
                 topColor = '#b45309'; sideColor = '#78350f'; accentColor = '#451a03';
@@ -264,55 +272,99 @@ function draw() {
             y: p.x + p.y,
             draw: () => {
                 const { isoX, isoY } = toIso(p.x, p.y);
-                ctx.fillStyle = '#451a03';
-                ctx.fillRect(isoX - 18, isoY + 2, 36, 18);
+                
+                // Desenhar o canteiro de terra no formato exato de losango isométrico
+                ctx.fillStyle = '#451a03'; // Cor de terra arada
+                ctx.beginPath();
+                ctx.moveTo(isoX, isoY);
+                ctx.lineTo(isoX + TILE_WIDTH/2, isoY + TILE_HEIGHT/2);
+                ctx.lineTo(isoX, isoY + TILE_HEIGHT);
+                ctx.lineTo(isoX - TILE_WIDTH/2, isoY + TILE_HEIGHT/2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#271002';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Renderizar o estado da plantação perfeitamente centrado no tile
                 if (p.state === 'growing') {
                     ctx.fillStyle = '#a3e635';
-                    ctx.fillRect(isoX - 3, isoY - 2, 6, 10);
+                    ctx.beginPath();
+                    ctx.arc(isoX, isoY + TILE_HEIGHT/2, 4, 0, Math.PI * 2);
+                    ctx.fill();
                 } else if (p.state === 'ready') {
-                    const sway = Math.sin(Date.now() * 0.005) * 3;
-                    ctx.font = '22px sans-serif';
-                    ctx.fillText('🌾', isoX - 11 + sway, isoY + 6);
+                    const sway = Math.sin(Date.now() * 0.005) * 2;
+                    ctx.font = '20px sans-serif';
+                    ctx.fillText('🌾', isoX - 8 + sway, isoY + TILE_HEIGHT/2 + 6);
                 }
             }
         });
     });
 
+    // Mercado com suporte a sprites
     renderables.push({
         y: market.x + market.y,
         draw: () => {
             const { isoX, isoY } = toIso(market.x, market.y);
             drawShadow(ctx, isoX, isoY + 5, 28, 14);
-            ctx.fillStyle = '#64748b';
-            ctx.fillRect(isoX - 30, isoY - 45, 60, 50);
-            ctx.fillStyle = '#78350f';
-            ctx.fillRect(isoX - 10, isoY - 18, 20, 24);
-            ctx.fillStyle = '#b91c1c';
-            ctx.beginPath();
-            ctx.moveTo(isoX - 36, isoY - 45);
-            ctx.lineTo(isoX, isoY - 75);
-            ctx.lineTo(isoX + 36, isoY - 45);
-            ctx.fill();
-            ctx.fillStyle = '#fef08a';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText('MERCADO', isoX - 22, isoY - 55);
+            const sprite = Sprites['market'];
+            if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+                ctx.drawImage(sprite, isoX - 36, isoY - 75, 72, 72);
+            } else {
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(isoX - 30, isoY - 45, 60, 50);
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(isoX - 10, isoY - 18, 20, 24);
+                ctx.fillStyle = '#b91c1c';
+                ctx.beginPath();
+                ctx.moveTo(isoX - 36, isoY - 45);
+                ctx.lineTo(isoX, isoY - 75);
+                ctx.lineTo(isoX + 36, isoY - 45);
+                ctx.fill();
+                ctx.fillStyle = '#fef08a';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText('MERCADO', isoX - 22, isoY - 55);
+            }
         }
     });
 
+    // Prensa de Queijo com suporte a sprites
+    // Prensa de Queijo com suporte a sprites e alinhamento isométrico exato
     renderables.push({
         y: cheesePress.x + cheesePress.y,
         draw: () => {
             const { isoX, isoY } = toIso(cheesePress.x, cheesePress.y);
+            
+            // Desenhar a base em losango isométrico igual aos canteiros, dando a sensação de fundação no mapa
+            ctx.fillStyle = '#b45309'; // Tom de madeira/pedra rústica da base
+            ctx.beginPath();
+            ctx.moveTo(isoX, isoY);
+            ctx.lineTo(isoX + TILE_WIDTH/2, isoY + TILE_HEIGHT/2);
+            ctx.lineTo(isoX, isoY + TILE_HEIGHT);
+            ctx.lineTo(isoX - TILE_WIDTH/2, isoY + TILE_HEIGHT/2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
             drawShadow(ctx, isoX, isoY + 2, 16, 8);
-            ctx.fillStyle = '#78350f';
-            ctx.fillRect(isoX - 16, isoY - 22, 32, 26);
-            if (cheesePress.status === 'processando') {
-                const bounce = Math.abs(Math.sin(Date.now() * 0.01)) * 4;
-                ctx.font = '16px sans-serif';
-                ctx.fillText('⚙️', isoX - 8, isoY - 8 - bounce);
-            } else if (cheesePress.status === 'pronto') {
-                ctx.font = '18px sans-serif';
-                ctx.fillText('🧀', isoX - 9, isoY - 8);
+            
+            const sprite = Sprites['cheesePress'];
+            if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+                ctx.drawImage(sprite, isoX - 20, isoY - 32, 40, 40);
+            } else {
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(isoX - 16, isoY - 22, 32, 26);
+                
+                if (cheesePress.status === 'processando') {
+                    const bounce = Math.abs(Math.sin(Date.now() * 0.01)) * 4;
+                    ctx.font = '16px sans-serif';
+                    ctx.fillText('⚙️', isoX - 8, isoY - 8 - bounce);
+                } else if (cheesePress.status === 'pronto') {
+                    ctx.font = '18px sans-serif';
+                    ctx.fillText('🧀', isoX - 9, isoY - 8);
+                }
             }
         }
     });
@@ -324,24 +376,29 @@ function draw() {
         });
     });
 
+    // Jogador com suporte a sprites
     renderables.push({
         y: player.x + player.y,
         draw: () => {
             const { isoX, isoY } = toIso(player.x, player.y);
             drawShadow(ctx, isoX, isoY, 14, 7);
-            
-            const bounce = player.isMoving ? Math.abs(Math.sin(player.animTimer * 4)) * 3 : 0;
-            const legSwing = player.isMoving ? Math.sin(player.animTimer * 4) * 3.5 : 0;
-
-            ctx.fillStyle = '#1e3a8a';
-            ctx.fillRect(isoX - 6 + legSwing, isoY - 10, 4, 10);
-            ctx.fillRect(isoX + 2 - legSwing, isoY - 10, 4, 10);
-            ctx.fillStyle = '#0284c7';
-            ctx.fillRect(isoX - 8, isoY - 24 - bounce, 16, 16);
-            ctx.fillStyle = '#fde047';
-            ctx.fillRect(isoX - 12, isoY - 32 - bounce, 24, 6);
-            ctx.fillStyle = '#fed7aa';
-            ctx.fillRect(isoX - 6, isoY - 28 - bounce, 12, 6);
+            const sprite = Sprites['farmer'];
+            if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+                const bounce = player.isMoving ? Math.abs(Math.sin(player.animTimer * 4)) * 3 : 0;
+                ctx.drawImage(sprite, isoX - 16, isoY - 36 - bounce, 32, 36);
+            } else {
+                const bounce = player.isMoving ? Math.abs(Math.sin(player.animTimer * 4)) * 3 : 0;
+                const legSwing = player.isMoving ? Math.sin(player.animTimer * 4) * 3.5 : 0;
+                ctx.fillStyle = '#1e3a8a';
+                ctx.fillRect(isoX - 6 + legSwing, isoY - 10, 4, 10);
+                ctx.fillRect(isoX + 2 - legSwing, isoY - 10, 4, 10);
+                ctx.fillStyle = '#0284c7';
+                ctx.fillRect(isoX - 8, isoY - 24 - bounce, 16, 16);
+                ctx.fillStyle = '#fde047';
+                ctx.fillRect(isoX - 12, isoY - 32 - bounce, 24, 6);
+                ctx.fillStyle = '#fed7aa';
+                ctx.fillRect(isoX - 6, isoY - 28 - bounce, 12, 6);
+            }
         }
     });
 
