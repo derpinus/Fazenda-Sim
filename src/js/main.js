@@ -1,20 +1,25 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Estado do Jogador com Animações de Passos
+// Estado do Jogador com Velocidade Reduzida para Controlo Preciso
 const player = {
-    x: 5, y: 5, speed: 0.08,
-    isMoving: false, animTimer: 0, dir: 'S',
+    x: 5, y: 5,
+    vx: 0, vy: 0,
+    maxSpeed: 0.018,          // Reduzido drasticamente para um passo calmo de fazendeiro
+    accel: 0.0035,            // Aceleração suave e progressiva
+    friction: 0.78,           // Atrito ajustado para travagem suave ao soltar as teclas
+    isMoving: false, 
+    animTimer: 0,
     coins: 20, maxCap: 5,
     seeds: 2, wheat: 0, milk: 0, cheese: 0, eggs: 0
 };
 const keys = {};
 
-// Ciclo Dia/Noite (Opção 2)
-let timeOfDay = 0; // 0 a 1000
+// Ciclo Dia/Noite
+let timeOfDay = 0;
 const DAY_LENGTH = 2000;
 
-// Efeitos Sonoros com Web Audio API (Opção 1)
+// Efeitos Sonoros com Web Audio API
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playTone(freq, type, duration) {
@@ -23,7 +28,7 @@ function playTone(freq, type, duration) {
     const gain = audioCtx.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -32,7 +37,7 @@ function playTone(freq, type, duration) {
 }
 
 function playSound(action) {
-    if (action === 'step') playTone(120, 'triangle', 0.05);
+    if (action === 'step') playTone(90, 'triangle', 0.05);
     if (action === 'collect') { playTone(440, 'sine', 0.1); setTimeout(() => playTone(880, 'sine', 0.15), 80); }
     if (action === 'coins') { playTone(587, 'sine', 0.1); setTimeout(() => playTone(1174, 'sine', 0.2), 100); }
     if (action === 'cow') { playTone(150, 'sawtooth', 0.3); }
@@ -96,22 +101,38 @@ function sellAll() {
 function update() {
     if (shopOpen) return;
 
-    // Atualiza Relógio Dia/Noite
     timeOfDay = (timeOfDay + 1) % DAY_LENGTH;
 
-    // Movimentação & Animação (Opção 3)
-    let dx = 0, dy = 0;
-    if (keys['w'] || keys['arrowup']) { dx -= player.speed; dy -= player.speed; }
-    if (keys['s'] || keys['arrowdown']) { dx += player.speed; dy += player.speed; }
-    if (keys['a'] || keys['arrowleft']) { dx -= player.speed; dy += player.speed; }
-    if (keys['d'] || keys['arrowright']) { dx += player.speed; dy -= player.speed; }
+    let inputX = 0;
+    let inputY = 0;
+    if (keys['w'] || keys['arrowup']) { inputX -= 1; inputY -= 1; }
+    if (keys['s'] || keys['arrowdown']) { inputX += 1; inputY += 1; }
+    if (keys['a'] || keys['arrowleft']) { inputX -= 1; inputY += 1; }
+    if (keys['d'] || keys['arrowright']) { inputX += 1; inputY -= 1; }
 
-    player.isMoving = (dx !== 0 || dy !== 0);
+    if (inputX !== 0 || inputY !== 0) {
+        const len = Math.hypot(inputX, inputY);
+        player.vx += (inputX / len) * player.accel;
+        player.vy += (inputY / len) * player.accel;
+    }
+
+    player.vx *= player.friction;
+    player.vy *= player.friction;
+
+    const currentSpeed = Math.hypot(player.vx, player.vy);
+    if (currentSpeed > player.maxSpeed) {
+        player.vx = (player.vx / currentSpeed) * player.maxSpeed;
+        player.vy = (player.vy / currentSpeed) * player.maxSpeed;
+    }
+
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Ativa a animação de passos se houver velocidade real
+    player.isMoving = currentSpeed > 0.0015;
     if (player.isMoving) {
-        player.x += dx;
-        player.y += dy;
-        player.animTimer += 0.2;
-        if (Math.floor(player.animTimer) % 3 === 0) playSound('step');
+        player.animTimer += 0.05;
+        if (Math.floor(player.animTimer * 10) % 25 === 0) playSound('step');
     } else {
         player.animTimer = 0;
     }
@@ -119,7 +140,7 @@ function update() {
     player.x = Math.max(0, Math.min(10, player.x));
     player.y = Math.max(0, Math.min(10, player.y));
 
-    // Animais
+    // Lógica dos Animais e Interações
     cows.forEach(c => {
         if (!c.hasMilk) {
             c.timer += c.fed ? 3 : 1;
@@ -146,7 +167,6 @@ function update() {
         if (cheesePress.timer > 150) { cheesePress.status = 'pronto'; cheesePress.timer = 0; }
     }
 
-    // Interações
     const prompt = document.getElementById('action-prompt');
     prompt.innerText = '';
 
@@ -213,7 +233,6 @@ function updateUI() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Desenhar Terreno
     for (let x = 0; x < 11; x++) {
         for (let y = 0; y < 11; y++) {
             let topColor = '#4ade80';
@@ -229,7 +248,6 @@ function draw() {
 
     const renderables = [];
 
-    // Horta com Animações de Balanço do Trigo
     farmPlots.forEach(p => {
         renderables.push({
             y: p.x + p.y,
@@ -249,36 +267,27 @@ function draw() {
         });
     });
 
-    // Casa do Mercado Ilustrada (Arte Estilizada)
     renderables.push({
         y: market.x + market.y,
         draw: () => {
             const { isoX, isoY } = toIso(market.x, market.y);
             drawShadow(ctx, isoX, isoY + 5, 28, 14);
-            
-            // Paredes de Pedra
             ctx.fillStyle = '#64748b';
             ctx.fillRect(isoX - 30, isoY - 45, 60, 50);
-            
-            // Porta de Madeira
             ctx.fillStyle = '#78350f';
             ctx.fillRect(isoX - 10, isoY - 18, 20, 24);
-            
-            // Telhado
             ctx.fillStyle = '#b91c1c';
             ctx.beginPath();
             ctx.moveTo(isoX - 36, isoY - 45);
             ctx.lineTo(isoX, isoY - 75);
             ctx.lineTo(isoX + 36, isoY - 45);
             ctx.fill();
-
             ctx.fillStyle = '#fef08a';
             ctx.font = 'bold 11px sans-serif';
             ctx.fillText('MERCADO', isoX - 22, isoY - 55);
         }
     });
 
-    // Prensa de Queijo
     renderables.push({
         y: cheesePress.x + cheesePress.y,
         draw: () => {
@@ -297,35 +306,26 @@ function draw() {
         }
     });
 
-    // Vacas Animadas (Respiração e Mastigação)
     cows.forEach(c => {
         renderables.push({
             y: c.x + c.y,
             draw: () => {
                 const { isoX, isoY } = toIso(c.x, c.y);
                 drawShadow(ctx, isoX, isoY, 18, 9);
-
                 const breath = Math.sin((Date.now() + c.animOffset) * 0.004) * 2;
-                
-                // Corpo da Vaca (Branco com Manchas)
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.ellipse(isoX, isoY - 12, 16, 12 + breath, 0, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Manchas Pretas
                 ctx.fillStyle = '#1e293b';
                 ctx.beginPath();
                 ctx.arc(isoX - 6, isoY - 14, 5, 0, Math.PI * 2);
                 ctx.arc(isoX + 5, isoY - 10, 4, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Cabeça
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.arc(isoX - 12, isoY - 18, 8, 0, Math.PI * 2);
                 ctx.fill();
-
                 if (c.hasMilk) {
                     ctx.font = '14px sans-serif';
                     ctx.fillText('🥛', isoX - 7, isoY - 30 + breath);
@@ -334,25 +334,19 @@ function draw() {
         });
     });
 
-    // Galinhas Animadas
     chickens.forEach(ch => {
         renderables.push({
             y: ch.x + ch.y,
             draw: () => {
                 const { isoX, isoY } = toIso(ch.x, ch.y);
                 drawShadow(ctx, isoX, isoY, 10, 5);
-
                 const peck = Math.abs(Math.sin((Date.now() + ch.animOffset) * 0.006)) * 3;
-
                 ctx.fillStyle = '#f97316';
                 ctx.beginPath();
                 ctx.arc(isoX, isoY - 8 - peck, 9, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Crista Vermelha
                 ctx.fillStyle = '#ef4444';
                 ctx.fillRect(isoX - 2, isoY - 19 - peck, 4, 4);
-
                 if (ch.hasEgg) {
                     ctx.font = '12px sans-serif';
                     ctx.fillText('🥚', isoX - 6, isoY - 20);
@@ -361,39 +355,30 @@ function draw() {
         });
     });
 
-    // Fazendeiro com Walk-Cycle (Opção 3: Passos Animados)
     renderables.push({
         y: player.x + player.y,
         draw: () => {
             const { isoX, isoY } = toIso(player.x, player.y);
             drawShadow(ctx, isoX, isoY, 14, 7);
+            
+            const bounce = player.isMoving ? Math.abs(Math.sin(player.animTimer * 4)) * 3 : 0;
+            const legSwing = player.isMoving ? Math.sin(player.animTimer * 4) * 3.5 : 0;
 
-            // Animação de Passos e Balanço
-            const bounce = player.isMoving ? Math.abs(Math.sin(player.animTimer)) * 5 : 0;
-            const legSwing = player.isMoving ? Math.sin(player.animTimer) * 6 : 0;
-
-            // Pernas
             ctx.fillStyle = '#1e3a8a';
             ctx.fillRect(isoX - 6 + legSwing, isoY - 10, 4, 10);
             ctx.fillRect(isoX + 2 - legSwing, isoY - 10, 4, 10);
-
-            // Corpo
             ctx.fillStyle = '#0284c7';
             ctx.fillRect(isoX - 8, isoY - 24 - bounce, 16, 16);
-
-            // Cabeça
-            ctx.fillStyle = '#fde047'; // Chapéu de Palha
+            ctx.fillStyle = '#fde047';
             ctx.fillRect(isoX - 12, isoY - 32 - bounce, 24, 6);
-            ctx.fillStyle = '#fed7aa'; // Rosto
+            ctx.fillStyle = '#fed7aa';
             ctx.fillRect(isoX - 6, isoY - 28 - bounce, 12, 6);
         }
     });
 
-    // Ordenação e Renderização
     renderables.sort((a, b) => a.y - b.y);
     renderables.forEach(r => r.draw());
 
-    // 2. Sobreposição do Ciclo Dia e Noite / Iluminação (Opção 2)
     const nightAlpha = Math.abs(Math.sin((timeOfDay / DAY_LENGTH) * Math.PI)) * 0.45;
     ctx.fillStyle = `rgba(15, 23, 42, ${nightAlpha})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
