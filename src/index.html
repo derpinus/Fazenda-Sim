@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fazenda Sim - v0.2</title>
+    <title>Fazenda Sim - v0.3</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -48,20 +48,21 @@
 </head>
 <body>
 
-    <h1>🌾 Fazenda Sim - v0.2 (Com Galinheiro)</h1>
+    <h1>🌾 Fazenda Sim - v0.3 (Com Prensa de Queijo)</h1>
 
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="ui">
             <div>💰 <b>Moedas:</b> $<span id="coins">0</span></div>
             <div>🥛 <b>Leite:</b> <span id="milk">0</span>/5</div>
+            <div>🧀 <b>Queijo:</b> <span id="cheese">0</span>/3</div>
             <div>🥚 <b>Ovos:</b> <span id="eggs">0</span>/3</div>
             <div id="action-prompt" style="color: #ffeb3b; margin-top: 5px; font-weight: bold;"></div>
         </div>
     </div>
 
     <div id="controls-hint">
-        🎮 <b>Controles:</b> <b>WASD</b> ou <b>Setas</b> para mover. Pressione <b>ESPAÇO</b> para interagir (ordenhar, pegar ovo, vender).
+        🎮 <b>Controles:</b> <b>WASD</b> ou <b>Setas</b> para mover. Pressione <b>ESPAÇO</b> para interagir.
     </div>
 
     <script>
@@ -69,7 +70,7 @@
         const ctx = canvas.getContext('2d');
 
         // Estado do Jogador
-        const player = { x: 400, y: 300, speed: 4, width: 32, height: 32, coins: 0, milk: 0, maxMilk: 5, eggs: 0, maxEggs: 3 };
+        const player = { x: 400, y: 300, speed: 4, width: 32, height: 32, coins: 0, milk: 0, maxMilk: 5, eggs: 0, maxEggs: 3, cheese: 0, maxCheese: 3 };
         const keys = {};
 
         // Vaca e Recinto
@@ -79,6 +80,9 @@
         // Galinha e Galinheiro
         const chicken = { x: 550, y: 350, width: 24, height: 24, hasEgg: true, eggTimer: 0 };
         const chickenFence = { x: 500, y: 300, width: 180, height: 160 };
+
+        // Prensa de Queijo
+        const cheesePress = { x: 220, y: 350, width: 50, height: 45, status: 'vazia', timer: 0 }; // 'vazia', 'processando', 'pronto'
 
         // Ponto de Venda (Mercado)
         const market = { x: 650, y: 100, width: 70, height: 60 };
@@ -109,12 +113,22 @@
                 if (chicken.eggTimer > 200) { chicken.hasEgg = true; chicken.eggTimer = 0; }
             }
 
+            // Lógica da Prensa de Queijo
+            if (cheesePress.status === 'processando') {
+                cheesePress.timer++;
+                if (cheesePress.timer > 180) { // ~3 segundos
+                    cheesePress.status = 'pronto';
+                    cheesePress.timer = 0;
+                }
+            }
+
             // Interações
             const actionPrompt = document.getElementById('action-prompt');
             actionPrompt.innerText = '';
 
             const distCow = getDistance(player, cow);
             const distChicken = getDistance(player, chicken);
+            const distPress = getDistance(player, cheesePress);
             const distMarket = getDistance(player, market);
 
             if (distCow < 60) {
@@ -135,23 +149,51 @@
                 } else {
                     actionPrompt.innerText = 'Limite de ovos atingido!';
                 }
+            } else if (distPress < 60) {
+                if (cheesePress.status === 'vazia') {
+                    if (player.milk > 0) {
+                        actionPrompt.innerText = '[ESPAÇO] Colocar Leite na Prensa';
+                        if (keys[' ']) {
+                            player.milk--;
+                            cheesePress.status = 'processando';
+                            keys[' '] = false;
+                        }
+                    } else {
+                        actionPrompt.innerText = 'Você precisa de Leite para usar a prensa!';
+                    }
+                } else if (cheesePress.status === 'processando') {
+                    actionPrompt.innerText = 'Prensa trabalhando no queijo...';
+                } else if (cheesePress.status === 'pronto') {
+                    if (player.cheese < player.maxCheese) {
+                        actionPrompt.innerText = '[ESPAÇO] Coletar Queijo';
+                        if (keys[' ']) {
+                            player.cheese++;
+                            cheesePress.status = 'vazia';
+                            keys[' '] = false;
+                        }
+                    } else {
+                        actionPrompt.innerText = 'Inventário de Queijo cheio!';
+                    }
+                }
             } else if (distMarket < 70) {
-                if (player.milk > 0 || player.eggs > 0) {
-                    actionPrompt.innerText = '[ESPAÇO] Vender Produtos (Leite: $15 | Ovo: $8)';
+                if (player.milk > 0 || player.eggs > 0 || player.cheese > 0) {
+                    actionPrompt.innerText = '[ESPAÇO] Vender (Leite: $15 | Ovo: $8 | Queijo: $40)';
                     if (keys[' ']) {
-                        player.coins += (player.milk * 15) + (player.eggs * 8);
+                        player.coins += (player.milk * 15) + (player.eggs * 8) + (player.cheese * 40);
                         player.milk = 0;
                         player.eggs = 0;
+                        player.cheese = 0;
                         keys[' '] = false;
                     }
                 } else {
-                    actionPrompt.innerText = 'Traga leite ou ovos para vender!';
+                    actionPrompt.innerText = 'Traga produtos para vender no mercado!';
                 }
             }
 
             document.getElementById('coins').innerText = player.coins;
             document.getElementById('milk').innerText = player.milk;
             document.getElementById('eggs').innerText = player.eggs;
+            document.getElementById('cheese').innerText = player.cheese;
         }
 
         function draw() {
@@ -187,6 +229,22 @@
             if (chicken.hasEgg) {
                 ctx.font = '12px sans-serif';
                 ctx.fillText('🥚', chicken.x + 6, chicken.y - 6);
+            }
+
+            // Prensa de Queijo
+            ctx.fillStyle = '#8d6e63';
+            ctx.fillRect(cheesePress.x, cheesePress.y, cheesePress.width, cheesePress.height);
+            ctx.strokeStyle = '#3e2723';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cheesePress.x, cheesePress.y, cheesePress.width, cheesePress.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = '11px sans-serif';
+            ctx.fillText('PRENSA', cheesePress.x + 4, cheesePress.y + 22);
+            
+            if (cheesePress.status === 'processando') {
+                ctx.fillText('⚙️', cheesePress.x + 18, cheesePress.y + 38);
+            } else if (cheesePress.status === 'pronto') {
+                ctx.fillText('🧀', cheesePress.x + 16, cheesePress.y + 38);
             }
 
             // Mercado
