@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fazenda Sim - Modular v0.5</title>
-    <!-- Vinculo com a folha de estilos separada -->
+    <title>Fazenda Sim - Currais e Animais v0.6</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <h1>🏰 Fazenda Sim - Estrutura Modular Isométrica</h1>
+    <h1>🏰 Fazenda Sim - Currais e Ecossistema Animal</h1>
 
     <div id="game-container">
         <canvas id="gameCanvas" width="900" height="650"></canvas>
@@ -25,13 +24,14 @@
             </div>
             <div class="stat-group">
                 <div class="stat-item">🥛 Leite: <span id="milk">0</span></div>
+                <div class="stat-item">🧶 Lã: <span id="wool">0</span></div>
                 <div class="stat-item">🧀 Queijo: <span id="cheese">0</span></div>
                 <div class="stat-item">🥚 Ovos: <span id="eggs">0</span></div>
             </div>
             <div id="action-prompt" style="color: #fef08a; margin-top: 6px; font-weight: bold; text-align:center;"></div>
         </div>
 
-        <!-- Loja Modal -->
+        <!-- Loja Modal com Novos Animais -->
         <div id="shop-modal">
             <h2>🛒 Mercado da Vila</h2>
             <div class="shop-item">
@@ -47,8 +47,16 @@
                 <button onclick="buyItem('cow', 150)">$150</button>
             </div>
             <div class="shop-item">
+                <span>🐑 Ovelha (Produz Lã)</span>
+                <button onclick="buyItem('sheep', 120)">$120</button>
+            </div>
+            <div class="shop-item">
                 <span>🐓 Galinha Botadeira</span>
                 <button onclick="buyItem('chicken', 80)">$80</button>
+            </div>
+            <div class="shop-item">
+                <span>🐎 Cavalo de Raça</span>
+                <button onclick="buyItem('horse', 250)">$250</button>
             </div>
             <div class="shop-item" style="border-top: 1px solid #334155; padding-top: 10px;">
                 <span>🪙 Vender Colheita/Produtos</span>
@@ -62,8 +70,9 @@
         🎮 <b>Mover:</b> WASD / Setas | <b>Interagir:</b> ESPAÇO | <b>Mercado:</b> Tecla E
     </div>
 
-    <!-- Vínculos com os scripts modulares -->
+    <!-- Scripts Modulares -->
     <script src="js/engine.js"></script>
+    <script src="js/entities.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

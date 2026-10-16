@@ -1,21 +1,20 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Estado do Jogador com Velocidade Reduzida para Controlo Preciso
+// Estado do Jogador
 const player = {
     x: 5, y: 5,
     vx: 0, vy: 0,
-    maxSpeed: 0.018,          // Reduzido drasticamente para um passo calmo de fazendeiro
-    accel: 0.0035,            // Aceleração suave e progressiva
-    friction: 0.78,           // Atrito ajustado para travagem suave ao soltar as teclas
+    maxSpeed: 0.018,
+    accel: 0.0035,
+    friction: 0.78,
     isMoving: false, 
     animTimer: 0,
-    coins: 20, maxCap: 5,
-    seeds: 2, wheat: 0, milk: 0, cheese: 0, eggs: 0
+    coins: 30, maxCap: 5,
+    seeds: 2, wheat: 0, milk: 0, wool: 0, cheese: 0, eggs: 0
 };
 const keys = {};
 
-// Ciclo Dia/Noite
 let timeOfDay = 0;
 const DAY_LENGTH = 2000;
 
@@ -40,20 +39,29 @@ function playSound(action) {
     if (action === 'step') playTone(90, 'triangle', 0.05);
     if (action === 'collect') { playTone(440, 'sine', 0.1); setTimeout(() => playTone(880, 'sine', 0.15), 80); }
     if (action === 'coins') { playTone(587, 'sine', 0.1); setTimeout(() => playTone(1174, 'sine', 0.2), 100); }
-    if (action === 'cow') { playTone(150, 'sawtooth', 0.3); }
+    if (action === 'animal') { playTone(150, 'sawtooth', 0.25); }
 }
 
-// Entidades
+// Entidades do Jogo (Usando a classe Animal de entities.js)
 const market = { x: 1, y: 1 };
 const cheesePress = { x: 4, y: 2, status: 'vazia', timer: 0 };
 
-const cows = [{ x: 2, y: 7, hasMilk: true, timer: 0, fed: false, animOffset: Math.random()*100 }];
-const chickens = [{ x: 8, y: 3, hasEgg: true, timer: 0, fed: false, animOffset: Math.random()*100 }];
+// Currais definidos por limites {minX, maxX, minY, maxY}
+const cowPen = { minX: 1, maxX: 4, minY: 5, maxY: 9 };
+const sheepPen = { minX: 6, maxX: 9, minY: 6, maxY: 9 };
+const chickenPen = { minX: 7, maxX: 9, minY: 1, maxY: 3 };
+const horsePen = { minX: 1, maxX: 3, minY: 3, maxY: 5 };
+
+const animals = [
+    new Animal('cow', 2, 7, cowPen),
+    new Animal('sheep', 7, 7, sheepPen),
+    new Animal('chicken', 8, 2, chickenPen),
+    new Animal('horse', 2, 4, horsePen)
+];
 
 const farmPlots = [
-    { x: 6, y: 6, state: 'empty', timer: 0 },
-    { x: 7, y: 6, state: 'empty', timer: 0 },
-    { x: 8, y: 6, state: 'empty', timer: 0 }
+    { x: 5, y: 6, state: 'empty', timer: 0 },
+    { x: 5, y: 7, state: 'empty', timer: 0 }
 ];
 
 let shopOpen = false;
@@ -79,10 +87,16 @@ function buyItem(type, cost) {
     } else if (type === 'bag') {
         player.maxCap += 5; player.coins -= cost;
     } else if (type === 'cow') {
-        cows.push({ x: 1 + Math.random()*3, y: 6 + Math.random()*3, hasMilk: false, timer: 0, fed: false, animOffset: Math.random()*100 });
+        animals.push(new Animal('cow', cowPen.minX + 1, cowPen.minY + 1, cowPen));
+        player.coins -= cost;
+    } else if (type === 'sheep') {
+        animals.push(new Animal('sheep', sheepPen.minX + 1, sheepPen.minY + 1, sheepPen));
         player.coins -= cost;
     } else if (type === 'chicken') {
-        chickens.push({ x: 7 + Math.random()*3, y: 1 + Math.random()*3, hasEgg: false, timer: 0, fed: false, animOffset: Math.random()*100 });
+        animals.push(new Animal('chicken', chickenPen.minX + 1, chickenPen.minY + 1, chickenPen));
+        player.coins -= cost;
+    } else if (type === 'horse') {
+        animals.push(new Animal('horse', horsePen.minX + 1, horsePen.minY + 1, horsePen));
         player.coins -= cost;
     }
     playSound('coins');
@@ -90,10 +104,10 @@ function buyItem(type, cost) {
 }
 
 function sellAll() {
-    const total = (player.milk * 15) + (player.cheese * 45) + (player.eggs * 10) + (player.wheat * 12);
+    const total = (player.milk * 15) + (player.wool * 18) + (player.cheese * 45) + (player.eggs * 10) + (player.wheat * 12);
     if (total === 0) return alert('Sem produtos para vender!');
     player.coins += total;
-    player.milk = 0; player.cheese = 0; player.eggs = 0; player.wheat = 0;
+    player.milk = 0; player.wool = 0; player.cheese = 0; player.eggs = 0; player.wheat = 0;
     playSound('coins');
     updateUI();
 }
@@ -128,7 +142,6 @@ function update() {
     player.x += player.vx;
     player.y += player.vy;
 
-    // Ativa a animação de passos se houver velocidade real
     player.isMoving = currentSpeed > 0.0015;
     if (player.isMoving) {
         player.animTimer += 0.05;
@@ -140,20 +153,8 @@ function update() {
     player.x = Math.max(0, Math.min(10, player.x));
     player.y = Math.max(0, Math.min(10, player.y));
 
-    // Lógica dos Animais e Interações
-    cows.forEach(c => {
-        if (!c.hasMilk) {
-            c.timer += c.fed ? 3 : 1;
-            if (c.timer > 300) { c.hasMilk = true; c.timer = 0; c.fed = false; }
-        }
-    });
-
-    chickens.forEach(ch => {
-        if (!ch.hasEgg) {
-            ch.timer += ch.fed ? 3 : 1;
-            if (ch.timer > 200) { ch.hasEgg = true; ch.timer = 0; ch.fed = false; }
-        }
-    });
+    // Atualiza IA de todos os animais
+    animals.forEach(a => a.update());
 
     farmPlots.forEach(p => {
         if (p.state === 'growing') {
@@ -167,6 +168,7 @@ function update() {
         if (cheesePress.timer > 150) { cheesePress.status = 'pronto'; cheesePress.timer = 0; }
     }
 
+    // Interações
     const prompt = document.getElementById('action-prompt');
     prompt.innerText = '';
 
@@ -174,23 +176,24 @@ function update() {
         prompt.innerText = '[E] Entrar na Loja da Vila';
     }
 
-    cows.forEach(c => {
-        if (Math.hypot(player.x - c.x, player.y - c.y) < 1.2) {
-            if (c.hasMilk && player.milk < player.maxCap) {
-                prompt.innerText = '[ESPAÇO] Ordenhar Vaca';
-                if (keys[' ']) { player.milk++; c.hasMilk = false; playSound('cow'); playSound('collect'); keys[' '] = false; }
-            } else if (!c.hasMilk && player.wheat > 0 && !c.fed) {
+    animals.forEach(a => {
+        if (Math.hypot(player.x - a.x, player.y - a.y) < 1.3) {
+            if (a.hasProduct && player.maxCap > (player.milk + player.wool + player.eggs + player.wheat)) {
+                if (a.type === 'cow') {
+                    prompt.innerText = '[ESPAÇO] Ordenhar Vaca';
+                    if (keys[' ']) { player.milk++; a.hasProduct = false; playSound('animal'); playSound('collect'); keys[' '] = false; }
+                } else if (a.type === 'sheep') {
+                    prompt.innerText = '[ESPAÇO] Tosquia de Lã';
+                    if (keys[' ']) { player.wool++; a.hasProduct = false; playSound('animal'); playSound('collect'); keys[' '] = false; }
+                } else if (a.type === 'chicken') {
+                    prompt.innerText = '[ESPAÇO] Coletar Ovo';
+                    if (keys[' ']) { player.eggs++; a.hasProduct = false; playSound('collect'); keys[' '] = false; }
+                } else if (a.type === 'horse') {
+                    prompt.innerText = '🐎 Cavalo Amigável (Mascote)';
+                }
+            } else if (!a.hasProduct && player.wheat > 0 && !a.fed && a.type !== 'horse') {
                 prompt.innerText = '[ESPAÇO] Alimentar Trigo (Acelera 3x)';
-                if (keys[' ']) { player.wheat--; c.fed = true; playSound('collect'); keys[' '] = false; }
-            }
-        }
-    });
-
-    chickens.forEach(ch => {
-        if (Math.hypot(player.x - ch.x, player.y - ch.y) < 1.2) {
-            if (ch.hasEgg && player.eggs < player.maxCap) {
-                prompt.innerText = '[ESPAÇO] Coletar Ovo';
-                if (keys[' ']) { player.eggs++; ch.hasEgg = false; playSound('collect'); keys[' '] = false; }
+                if (keys[' ']) { player.wheat--; a.fed = true; playSound('collect'); keys[' '] = false; }
             }
         }
     });
@@ -200,7 +203,7 @@ function update() {
             if (p.state === 'empty' && player.seeds > 0) {
                 prompt.innerText = '[ESPAÇO] Plantar Trigo';
                 if (keys[' ']) { player.seeds--; p.state = 'growing'; playSound('collect'); keys[' '] = false; }
-            } else if (p.state === 'ready' && player.wheat < player.maxCap) {
+            } else if (p.state === 'ready' && player.maxCap > (player.milk + player.wool + player.eggs + player.wheat)) {
                 prompt.innerText = '[ESPAÇO] Colher Trigo';
                 if (keys[' ']) { player.wheat++; p.state = 'empty'; playSound('collect'); keys[' '] = false; }
             }
@@ -211,7 +214,7 @@ function update() {
         if (cheesePress.status === 'vazia' && player.milk > 0) {
             prompt.innerText = '[ESPAÇO] Iniciar Prensa de Queijo';
             if (keys[' ']) { player.milk--; cheesePress.status = 'processando'; playSound('collect'); keys[' '] = false; }
-        } else if (cheesePress.status === 'pronto' && player.cheese < player.maxCap) {
+        } else if (cheesePress.status === 'pronto' && player.maxCap > (player.milk + player.wool + player.eggs + player.wheat + player.cheese)) {
             prompt.innerText = '[ESPAÇO] Coletar Queijo';
             if (keys[' ']) { player.cheese++; cheesePress.status = 'vazia'; playSound('collect'); keys[' '] = false; }
         }
@@ -226,6 +229,7 @@ function updateUI() {
     document.getElementById('seeds').innerText = player.seeds;
     document.getElementById('wheat').innerText = player.wheat;
     document.getElementById('milk').innerText = player.milk;
+    document.getElementById('wool').innerText = player.wool;
     document.getElementById('cheese').innerText = player.cheese;
     document.getElementById('eggs').innerText = player.eggs;
 }
@@ -239,14 +243,25 @@ function draw() {
             let sideColor = '#166534';
             let accentColor = '#14532d';
             
-            if (x >= 1 && x <= 4 && y >= 5 && y <= 9) { topColor = '#b45309'; sideColor = '#78350f'; accentColor = '#451a03'; }
-            if (x >= 6 && x <= 10 && y >= 1 && y <= 5) { topColor = '#d97706'; sideColor = '#92400e'; accentColor = '#78350f'; }
+            // Texturas dos currais no chão
+            if ((x >= 1 && x <= 4 && y >= 5 && y <= 9) || (x >= 6 && x <= 9 && y >= 6 && y <= 9)) {
+                topColor = '#b45309'; sideColor = '#78350f'; accentColor = '#451a03';
+            }
+            if (x >= 7 && x <= 9 && y >= 1 && y <= 3) {
+                topColor = '#d97706'; sideColor = '#92400e'; accentColor = '#78350f';
+            }
 
             drawIsometricTile(ctx, x, y, sideColor, topColor, accentColor);
         }
     }
 
     const renderables = [];
+
+    // Desenhar cercas dos currais
+    renderables.push({
+        y: 100, // Fora do Y-sorting normal para desenhar as vedações de fundo
+        draw: () => { drawPenFences(ctx); }
+    });
 
     farmPlots.forEach(p => {
         renderables.push({
@@ -306,52 +321,11 @@ function draw() {
         }
     });
 
-    cows.forEach(c => {
+    // Adiciona todos os animais ao array de renderização baseado em Y-sorting
+    animals.forEach(a => {
         renderables.push({
-            y: c.x + c.y,
-            draw: () => {
-                const { isoX, isoY } = toIso(c.x, c.y);
-                drawShadow(ctx, isoX, isoY, 18, 9);
-                const breath = Math.sin((Date.now() + c.animOffset) * 0.004) * 2;
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.ellipse(isoX, isoY - 12, 16, 12 + breath, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#1e293b';
-                ctx.beginPath();
-                ctx.arc(isoX - 6, isoY - 14, 5, 0, Math.PI * 2);
-                ctx.arc(isoX + 5, isoY - 10, 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(isoX - 12, isoY - 18, 8, 0, Math.PI * 2);
-                ctx.fill();
-                if (c.hasMilk) {
-                    ctx.font = '14px sans-serif';
-                    ctx.fillText('🥛', isoX - 7, isoY - 30 + breath);
-                }
-            }
-        });
-    });
-
-    chickens.forEach(ch => {
-        renderables.push({
-            y: ch.x + ch.y,
-            draw: () => {
-                const { isoX, isoY } = toIso(ch.x, ch.y);
-                drawShadow(ctx, isoX, isoY, 10, 5);
-                const peck = Math.abs(Math.sin((Date.now() + ch.animOffset) * 0.006)) * 3;
-                ctx.fillStyle = '#f97316';
-                ctx.beginPath();
-                ctx.arc(isoX, isoY - 8 - peck, 9, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#ef4444';
-                ctx.fillRect(isoX - 2, isoY - 19 - peck, 4, 4);
-                if (ch.hasEgg) {
-                    ctx.font = '12px sans-serif';
-                    ctx.fillText('🥚', isoX - 6, isoY - 20);
-                }
-            }
+            y: a.x + a.y,
+            draw: () => a.draw(ctx)
         });
     });
 
