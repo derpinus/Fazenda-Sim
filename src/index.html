@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fazenda Sim - HTML5 Edition</title>
+    <title>Fazenda Sim - v0.2</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -28,7 +28,7 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.75);
             padding: 12px;
             border-radius: 6px;
             border: 2px solid #8bc34a;
@@ -48,113 +48,124 @@
 </head>
 <body>
 
-    <h1>🌾 Fazenda Sim - Protótipo v0.1</h1>
+    <h1>🌾 Fazenda Sim - v0.2 (Com Galinheiro)</h1>
 
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         <div id="ui">
             <div>💰 <b>Moedas:</b> $<span id="coins">0</span></div>
-            <div>🥛 <b>Leite no Balde:</b> <span id="milk">0</span>/5</div>
+            <div>🥛 <b>Leite:</b> <span id="milk">0</span>/5</div>
+            <div>🥚 <b>Ovos:</b> <span id="eggs">0</span>/3</div>
             <div id="action-prompt" style="color: #ffeb3b; margin-top: 5px; font-weight: bold;"></div>
         </div>
     </div>
 
     <div id="controls-hint">
-        🎮 <b>Controles:</b> Use as teclas <b>WASD</b> ou <b>Setas</b> para mover o fazendeiro. Pressione <b>ESPAÇO</b> para interagir.
+        🎮 <b>Controles:</b> <b>WASD</b> ou <b>Setas</b> para mover. Pressione <b>ESPAÇO</b> para interagir (ordenhar, pegar ovo, vender).
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Estado do Jogo
-        const player = { x: 400, y: 300, speed: 4, width: 32, height: 32, coins: 0, milk: 0, maxMilk: 5 };
+        // Estado do Jogador
+        const player = { x: 400, y: 300, speed: 4, width: 32, height: 32, coins: 0, milk: 0, maxMilk: 5, eggs: 0, maxEggs: 3 };
         const keys = {};
 
-        // Vaca
-        const cow = { x: 250, y: 200, width: 48, height: 40, hasMilk: true, milkTimer: 0 };
-        
-        // Ponto de Venda (Bancada/Mercado)
-        const market = { x: 650, y: 150, width: 60, height: 60 };
+        // Vaca e Recinto
+        const cow = { x: 220, y: 150, width: 48, height: 40, hasMilk: true, milkTimer: 0 };
+        const cowFence = { x: 150, y: 100, width: 220, height: 160 };
 
-        // Recinto (Cerca)
-        const fence = { x: 180, y: 130, width: 200, height: 180 };
+        // Galinha e Galinheiro
+        const chicken = { x: 550, y: 350, width: 24, height: 24, hasEgg: true, eggTimer: 0 };
+        const chickenFence = { x: 500, y: 300, width: 180, height: 160 };
 
-        // Eventos de Teclado
+        // Ponto de Venda (Mercado)
+        const market = { x: 650, y: 100, width: 70, height: 60 };
+
         window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-        // Distância entre dois pontos
         function getDistance(p1, p2) {
             return Math.hypot((p1.x + p1.width/2) - (p2.x + p2.width/2), (p1.y + p1.height/2) - (p2.y + p2.height/2));
         }
 
-        // Loop Principal do Jogo
         function update() {
-            // Movimentação do Fazendeiro
+            // Movimento do Fazendeiro
             if (keys['w'] || keys['arrowup']) player.y = Math.max(0, player.y - player.speed);
             if (keys['s'] || keys['arrowdown']) player.y = Math.min(canvas.height - player.height, player.y + player.speed);
             if (keys['a'] || keys['arrowleft']) player.x = Math.max(0, player.x - player.speed);
             if (keys['d'] || keys['arrowright']) player.x = Math.min(canvas.width - player.width, player.x + player.speed);
 
-            // Regeneração de Leite da Vaca
+            // Regeneração de Leite
             if (!cow.hasMilk) {
                 cow.milkTimer++;
-                if (cow.milkTimer > 300) { // ~5 segundos a 60fps
-                    cow.hasMilk = true;
-                    cow.milkTimer = 0;
-                }
+                if (cow.milkTimer > 300) { cow.hasMilk = true; cow.milkTimer = 0; }
             }
 
-            // Interação
+            // Regeneração de Ovos
+            if (!chicken.hasEgg) {
+                chicken.eggTimer++;
+                if (chicken.eggTimer > 200) { chicken.hasEgg = true; chicken.eggTimer = 0; }
+            }
+
+            // Interações
             const actionPrompt = document.getElementById('action-prompt');
             actionPrompt.innerText = '';
 
             const distCow = getDistance(player, cow);
+            const distChicken = getDistance(player, chicken);
             const distMarket = getDistance(player, market);
 
             if (distCow < 60) {
                 if (cow.hasMilk && player.milk < player.maxMilk) {
-                    actionPrompt.innerText = '[ESPAÇO] Ordenhar a Vaca';
-                    if (keys[' ']) {
-                        player.milk++;
-                        cow.hasMilk = false;
-                        keys[' '] = false; // evitar disparos múltiplos
-                    }
+                    actionPrompt.innerText = '[ESPAÇO] Ordenhar Vaca';
+                    if (keys[' ']) { player.milk++; cow.hasMilk = false; keys[' '] = false; }
                 } else if (!cow.hasMilk) {
                     actionPrompt.innerText = 'A vaca está descansando...';
-                } else if (player.milk >= player.maxMilk) {
-                    actionPrompt.innerText = 'Balde de leite cheio! Vá vender no mercado.';
+                } else {
+                    actionPrompt.innerText = 'Balde de leite cheio!';
+                }
+            } else if (distChicken < 50) {
+                if (chicken.hasEgg && player.eggs < player.maxEggs) {
+                    actionPrompt.innerText = '[ESPAÇO] Coletar Ovo';
+                    if (keys[' ']) { player.eggs++; chicken.hasEgg = false; keys[' '] = false; }
+                } else if (!chicken.hasEgg) {
+                    actionPrompt.innerText = 'A galinha ainda não botou ovo...';
+                } else {
+                    actionPrompt.innerText = 'Limite de ovos atingido!';
                 }
             } else if (distMarket < 70) {
-                if (player.milk > 0) {
-                    actionPrompt.innerText = '[ESPAÇO] Vender Leite ($15 cada)';
+                if (player.milk > 0 || player.eggs > 0) {
+                    actionPrompt.innerText = '[ESPAÇO] Vender Produtos (Leite: $15 | Ovo: $8)';
                     if (keys[' ']) {
-                        player.coins += player.milk * 15;
+                        player.coins += (player.milk * 15) + (player.eggs * 8);
                         player.milk = 0;
+                        player.eggs = 0;
                         keys[' '] = false;
                     }
                 } else {
-                    actionPrompt.innerText = 'Traga leite para vender aqui!';
+                    actionPrompt.innerText = 'Traga leite ou ovos para vender!';
                 }
             }
 
-            // Atualiza UI
             document.getElementById('coins').innerText = player.coins;
             document.getElementById('milk').innerText = player.milk;
+            document.getElementById('eggs').innerText = player.eggs;
         }
 
         function draw() {
-            // Limpa o Canvas (Grama)
+            // Fundo (Grama)
             ctx.fillStyle = '#5d9e39';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Desenha o Recinto da Vaca (Cerca)
+            // Cercas
             ctx.strokeStyle = '#8d5524';
-            ctx.lineWidth = 6;
-            ctx.strokeRect(fence.x, fence.y, fence.width, fence.height);
+            ctx.lineWidth = 5;
+            ctx.strokeRect(cowFence.x, cowFence.y, cowFence.width, cowFence.height);
+            ctx.strokeRect(chickenFence.x, chickenFence.y, chickenFence.width, chickenFence.height);
 
-            // Desenha a Vaca
+            // Vaca
             ctx.fillStyle = cow.hasMilk ? '#ffffff' : '#dddddd';
             ctx.beginPath();
             ctx.roundRect(cow.x, cow.y, cow.width, cow.height, 8);
@@ -162,33 +173,34 @@
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
             ctx.stroke();
-
-            // Manchas da Vaca
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.arc(cow.x + 15, cow.y + 15, 8, 0, Math.PI * 2);
-            ctx.arc(cow.x + 32, cow.y + 25, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Indicador de Leite na Vaca
             if (cow.hasMilk) {
-                ctx.fillStyle = '#fff';
-                ctx.font = '16px sans-serif';
-                ctx.fillText('🥛', cow.x + 14, cow.y - 8);
+                ctx.font = '14px sans-serif';
+                ctx.fillText('🥛', cow.x + 14, cow.y - 6);
             }
 
-            // Desenha o Mercado / Ponto de Venda
+            // Galinha
+            ctx.fillStyle = '#ff9800';
+            ctx.beginPath();
+            ctx.arc(chicken.x + 12, chicken.y + 12, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            if (chicken.hasEgg) {
+                ctx.font = '12px sans-serif';
+                ctx.fillText('🥚', chicken.x + 6, chicken.y - 6);
+            }
+
+            // Mercado
             ctx.fillStyle = '#d32f2f';
             ctx.fillRect(market.x, market.y, market.width, market.height);
             ctx.fillStyle = '#fff';
-            ctx.font = '12px sans-serif';
-            ctx.fillText('MERCADO', market.x + 4, market.y + 34);
+            ctx.font = '11px sans-serif';
+            ctx.fillText('MERCADO', market.x + 6, market.y + 35);
 
-            // Desenha o Fazendeiro
-            ctx.fillStyle = '#2196f3'; // Roupa azul
+            // Fazendeiro
+            ctx.fillStyle = '#2196f3';
             ctx.fillRect(player.x, player.y, player.width, player.height);
-            ctx.fillStyle = '#ffcc80'; // Chapéu/cabeça
-            ctx.fillRect(player.x + 4, player.y + 2, 24, 12);
+            ctx.fillStyle = '#ffcc80';
+            ctx.fillRect(player.x + 4, player.y + 2, 24, 10);
         }
 
         function gameLoop() {
@@ -197,7 +209,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Inicia o jogo
         gameLoop();
     </script>
 </body>
