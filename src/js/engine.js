@@ -1,8 +1,9 @@
-// Motor Isométrico e Desenho Vetorial Detalhado
+// Motor Isométrico e Utilitários de Projeção
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
-const ORIGIN_X = 450;
-const ORIGIN_Y = 120;
+const MAP_SIZE = 16;       // Grelha expandida para 16x16
+const ORIGIN_X = 550;      // Centralizado horizontalmente para canvas de 1100px
+const ORIGIN_Y = 80;       // Ajustado verticalmente para o topo
 
 function toIso(x, y) {
     return {
@@ -11,11 +12,10 @@ function toIso(x, y) {
     };
 }
 
-// Desenho dos blocos de terreno com relevo 3D e texturas
 function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     const { isoX, isoY } = toIso(gx, gy);
     
-    // Sombra/Lateral Esquerda
+    // Lateral Esquerda
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(isoX - TILE_WIDTH/2, isoY + TILE_HEIGHT/2);
@@ -33,7 +33,7 @@ function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     ctx.lineTo(isoX, isoY + TILE_HEIGHT + 14);
     ctx.fill();
 
-    // Topo (Superfície da Terra/Grama)
+    // Topo
     ctx.fillStyle = topColor;
     ctx.beginPath();
     ctx.moveTo(isoX, isoY);
@@ -43,13 +43,11 @@ function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     ctx.closePath();
     ctx.fill();
     
-    // Borda sutil de isolamento de tile
     ctx.strokeStyle = 'rgba(0,0,0,0.12)';
     ctx.lineWidth = 1;
     ctx.stroke();
 }
 
-// Desenho da Sombra dos Personagens/Objetos
 function drawShadow(ctx, isoX, isoY, radiusX = 14, radiusY = 7) {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
     ctx.beginPath();

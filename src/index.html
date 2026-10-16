@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fazenda Sim - Currais e Animais v0.6</title>
+    <title>Fazenda Sim - Mapa Expandido v0.7</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <h1>🏰 Fazenda Sim - Currais e Ecossistema Animal</h1>
+    <h1>🏰 Fazenda Sim - Mapa Expandido 16x16</h1>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="900" height="650"></canvas>
+        <!-- Canvas alargado para 1100x700 para suportar o mapa expandido -->
+        <canvas id="gameCanvas" width="1100" height="700"></canvas>
         
         <div id="ui">
             <div class="stat-group">
-                <div class="stat-item">💰 <span id="coins" style="color:#facc15">20</span></div>
+                <div class="stat-item">💰 <span id="coins" style="color:#facc15">30</span></div>
                 <div class="stat-item">🎒 Max: <span id="maxCap">5</span></div>
             </div>
             <div class="stat-group">
@@ -31,7 +32,7 @@
             <div id="action-prompt" style="color: #fef08a; margin-top: 6px; font-weight: bold; text-align:center;"></div>
         </div>
 
-        <!-- Loja Modal com Novos Animais -->
+        <!-- Loja Modal -->
         <div id="shop-modal">
             <h2>🛒 Mercado da Vila</h2>
             <div class="shop-item">
@@ -70,7 +71,6 @@
         🎮 <b>Mover:</b> WASD / Setas | <b>Interagir:</b> ESPAÇO | <b>Mercado:</b> Tecla E
     </div>
 
-    <!-- Scripts Modulares -->
     <script src="js/engine.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/main.js"></script>

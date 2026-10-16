@@ -1,9 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Estado do Jogador
 const player = {
-    x: 5, y: 5,
+    x: 8, y: 8, // Começa no centro do mapa 16x16
     vx: 0, vy: 0,
     maxSpeed: 0.018,
     accel: 0.0035,
@@ -11,7 +10,7 @@ const player = {
     isMoving: false, 
     animTimer: 0,
     coins: 30, maxCap: 5,
-    seeds: 2, wheat: 0, milk: 0, wool: 0, cheese: 0, eggs: 0
+    seeds: 4, wheat: 0, milk: 0, wool: 0, cheese: 0, eggs: 0
 };
 const keys = {};
 
@@ -42,26 +41,22 @@ function playSound(action) {
     if (action === 'animal') { playTone(150, 'sawtooth', 0.25); }
 }
 
-// Entidades do Jogo (Usando a classe Animal de entities.js)
-const market = { x: 1, y: 1 };
-const cheesePress = { x: 4, y: 2, status: 'vazia', timer: 0 };
-
-// Currais definidos por limites {minX, maxX, minY, maxY}
-const cowPen = { minX: 1, maxX: 4, minY: 5, maxY: 9 };
-const sheepPen = { minX: 6, maxX: 9, minY: 6, maxY: 9 };
-const chickenPen = { minX: 7, maxX: 9, minY: 1, maxY: 3 };
-const horsePen = { minX: 1, maxX: 3, minY: 3, maxY: 5 };
+// Entidades posicionadas no mapa 16x16
+const market = { x: 7, y: 7 };         // Mercado centralizado na praça
+const cheesePress = { x: 8, y: 7 };    // Prensa de queijo ao lado do mercado
 
 const animals = [
-    new Animal('cow', 2, 7, cowPen),
-    new Animal('sheep', 7, 7, sheepPen),
-    new Animal('chicken', 8, 2, chickenPen),
+    new Animal('cow', 2, 12, cowPen),
+    new Animal('sheep', 12, 12, sheepPen),
+    new Animal('chicken', 12, 4, chickenPen),
     new Animal('horse', 2, 4, horsePen)
 ];
 
 const farmPlots = [
-    { x: 5, y: 6, state: 'empty', timer: 0 },
-    { x: 5, y: 7, state: 'empty', timer: 0 }
+    { x: 7, y: 5, state: 'empty', timer: 0 },
+    { x: 8, y: 5, state: 'empty', timer: 0 },
+    { x: 7, y: 9, state: 'empty', timer: 0 },
+    { x: 8, y: 9, state: 'empty', timer: 0 }
 ];
 
 let shopOpen = false;
@@ -150,10 +145,10 @@ function update() {
         player.animTimer = 0;
     }
 
-    player.x = Math.max(0, Math.min(10, player.x));
-    player.y = Math.max(0, Math.min(10, player.y));
+    // Limites atualizados para MAP_SIZE = 16
+    player.x = Math.max(0, Math.min(MAP_SIZE - 1, player.x));
+    player.y = Math.max(0, Math.min(MAP_SIZE - 1, player.y));
 
-    // Atualiza IA de todos os animais
     animals.forEach(a => a.update());
 
     farmPlots.forEach(p => {
@@ -168,7 +163,6 @@ function update() {
         if (cheesePress.timer > 150) { cheesePress.status = 'pronto'; cheesePress.timer = 0; }
     }
 
-    // Interações
     const prompt = document.getElementById('action-prompt');
     prompt.innerText = '';
 
@@ -237,17 +231,20 @@ function updateUI() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let x = 0; x < 11; x++) {
-        for (let y = 0; y < 11; y++) {
+    // Grelha do mapa expandida para MAP_SIZE (16x16)
+    for (let x = 0; x < MAP_SIZE; x++) {
+        for (let y = 0; y < MAP_SIZE; y++) {
             let topColor = '#4ade80';
             let sideColor = '#166534';
             let accentColor = '#14532d';
             
-            // Texturas dos currais no chão
-            if ((x >= 1 && x <= 4 && y >= 5 && y <= 9) || (x >= 6 && x <= 9 && y >= 6 && y <= 9)) {
+            // Texturas dos currais
+            if ((x >= cowPen.minX && x <= cowPen.maxX && y >= cowPen.minY && y <= cowPen.maxY) ||
+                (x >= sheepPen.minX && x <= sheepPen.maxX && y >= sheepPen.minY && y <= sheepPen.maxY)) {
                 topColor = '#b45309'; sideColor = '#78350f'; accentColor = '#451a03';
             }
-            if (x >= 7 && x <= 9 && y >= 1 && y <= 3) {
+            if ((x >= chickenPen.minX && x <= chickenPen.maxX && y >= chickenPen.minY && y <= chickenPen.maxY) ||
+                (x >= horsePen.minX && x <= horsePen.maxX && y >= horsePen.minY && y <= horsePen.maxY)) {
                 topColor = '#d97706'; sideColor = '#92400e'; accentColor = '#78350f';
             }
 
@@ -257,9 +254,8 @@ function draw() {
 
     const renderables = [];
 
-    // Desenhar cercas dos currais
     renderables.push({
-        y: 100, // Fora do Y-sorting normal para desenhar as vedações de fundo
+        y: -10,
         draw: () => { drawPenFences(ctx); }
     });
 
@@ -321,7 +317,6 @@ function draw() {
         }
     });
 
-    // Adiciona todos os animais ao array de renderização baseado em Y-sorting
     animals.forEach(a => {
         renderables.push({
             y: a.x + a.y,
