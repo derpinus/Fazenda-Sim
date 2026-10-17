@@ -11,8 +11,8 @@
     <h1>🏰 Fazenda Sim - Mapa Expandido 24x24</h1>
 
     <div id="game-container">
-    <!-- Canvas alargado para 1600x800 para suportar o mapa 24x24 sem cortes -->
-    <canvas id="gameCanvas" width="1600" height="800"></canvas>
+        <!-- Canvas alargado para suportar o mapa isométrico sem cortes -->
+        <canvas id="gameCanvas" width="1600" height="800"></canvas>
         
         <div id="ui">
             <div class="stat-group">
@@ -30,6 +30,25 @@
                 <div class="stat-item">🥚 Ovos: <span id="eggs">0</span></div>
             </div>
             <div id="action-prompt" style="color: #fef08a; margin-top: 6px; font-weight: bold; text-align:center;"></div>
+        </div>
+
+        <!-- Painel do Modo de Teste / Editor de Objetos (Sandbox) -->
+        <div id="test-sandbox-panel" style="position: absolute; top: 15px; right: 15px; background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; padding: 12px; border-radius: 10px; color: white; font-family: sans-serif; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #4ade80; text-align: center;">🧪 Sandbox / Editor</h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 12px;">
+                <button onclick="setSandboxTool('cow')" id="btn-cow" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐄 Vaca</button>
+                <button onclick="setSandboxTool('sheep')" id="btn-sheep" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐑 Ovelha</button>
+                <button onclick="setSandboxTool('chicken')" id="btn-chicken" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐔 Galinha</button>
+                <button onclick="setSandboxTool('horse')" id="btn-horse" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐎 Cavalo</button>
+                <button onclick="setSandboxTool('market')" id="btn-market" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🏪 Mercado</button>
+                <button onclick="setSandboxTool('cheesePress')" id="btn-cheesePress" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🧀 Prensa</button>
+                <button onclick="setSandboxTool('plot')" id="btn-plot" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🌱 Canteiro</button>
+                <button onclick="setSandboxTool('pasture')" id="btn-pasture" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🌿 Capim</button>
+                <button onclick="setSandboxTool('corn')" id="btn-corn" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🌽 Milho</button>
+                <button onclick="setSandboxTool('obstacle')" id="btn-obstacle" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🪨 Rocha</button>
+            </div>
+            <button onclick="setSandboxTool('remove')" id="btn-remove" style="width: 100%; margin-top: 8px; background: #991b1b; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️ Ferramenta Remover</button>
+            <div id="current-tool-label" style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 6px;">Ferramenta Ativa: Nenhum</div>
         </div>
 
         <!-- Loja Modal -->
@@ -71,8 +90,16 @@
         🎮 <b>Mover:</b> WASD / Setas | <b>Interagir:</b> ESPAÇO | <b>Mercado:</b> Tecla E
     </div>
 
+    <!-- Ordem correta e segura de carregamento dos módulos JS -->
     <script src="js/engine.js"></script>
-    <script src="js/entities.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/animal.js"></script>
+    <script src="js/sandbox.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/renderer.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

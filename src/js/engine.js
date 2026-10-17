@@ -1,7 +1,7 @@
 // Motor de Projeção Volumétrica (Perspetiva Estilo 3 Pontos / Axonométrica)
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
-const MAP_SIZE = 24;       
+const MAP_SIZE = 16;       
 
 let ORIGIN_X = 800;      
 let ORIGIN_Y = 220;      
@@ -14,11 +14,10 @@ function loadSprite(key, path) {
     Sprites[key] = img;
 }
 
-// Carregamento de Sprites com Fallback Automático
+// Carregamento de Sprites disponíveis (Removido o chicken.png genérico)
 loadSprite('farmer', 'assets/game/farmer.png');
 loadSprite('cow', 'assets/game/cow.png');
 loadSprite('sheep', 'assets/game/sheep.png');
-loadSprite('chicken', 'assets/game/chicken.png');
 loadSprite('horse', 'assets/game/horse.png');
 loadSprite('market', 'assets/game/market.png');
 loadSprite('cheesePress', 'assets/game/cheese_press.png');
@@ -34,11 +33,8 @@ function toIso(x, y) {
 
 function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     const { isoX, isoY } = toIso(gx, gy);
-    
-    // Altura de extrusão maior (16px) para dar o efeito volumétrico de bloco 3D sólido
     const blockHeight = 16; 
 
-    // Lateral Esquerda (face com sombra profunda)
     ctx.fillStyle = accentColor || '#11381c';
     ctx.beginPath();
     ctx.moveTo(isoX - TILE_WIDTH/2, isoY + TILE_HEIGHT/2);
@@ -47,7 +43,6 @@ function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     ctx.lineTo(isoX - TILE_WIDTH/2, isoY + TILE_HEIGHT/2 + blockHeight);
     ctx.fill();
 
-    // Lateral Direita (face iluminada secundária)
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(isoX, isoY + TILE_HEIGHT);
@@ -56,7 +51,6 @@ function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     ctx.lineTo(isoX, isoY + TILE_HEIGHT + blockHeight);
     ctx.fill();
 
-    // Topo (Superfície principal)
     ctx.fillStyle = topColor;
     ctx.beginPath();
     ctx.moveTo(isoX, isoY);
@@ -66,7 +60,6 @@ function drawIsometricTile(ctx, gx, gy, color, topColor, accentColor) {
     ctx.closePath();
     ctx.fill();
     
-    // Contorno subtil para destacar a volumetria dos blocos
     ctx.strokeStyle = 'rgba(0,0,0,0.15)';
     ctx.lineWidth = 1;
     ctx.stroke();
