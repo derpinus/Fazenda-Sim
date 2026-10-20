@@ -4,42 +4,45 @@ import { GameState } from "../managers/gameState.js";
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-const DAY_LENGTH = 2000;
+import {
+    MAP_SIZE,
+    TILE_WIDTH,
+    TILE_HEIGHT,
+    DAY_LENGTH
+} from "./config.js";
 
-// =====================
-// Sprites
-// =====================
+import {
+    toIso,
+    drawShadow,
+    drawIsometricTile
+}
+    from "./isoUtils.js";
 
-const ChickenSprites = {
-    "front-right": new Image(),
-    "front-left": new Image(),
-    "back-right": new Image(),
-    "back-left": new Image()
-};
 
-ChickenSprites["front-right"].src =
-    "assets/game/chicken_front_right.png";
+function renderBuildings(renderables) {
 
-ChickenSprites["front-left"].src =
-    "assets/game/chicken_front_left.png";
-
-ChickenSprites["back-right"].src =
-    "assets/game/chicken_back_right.png";
-
-ChickenSprites["back-left"].src =
-    "assets/game/chicken_back_left.png";
-
-Object.entries(ChickenSprites).forEach(
-    ([key, sprite]) => {
-
-        sprite.onerror = () => {
-
-            console.warn(
-                `Erro carregando sprite da galinha: ${key}`
-            );
-        };
+    if (!GameState.buildings?.length) {
+        return;
     }
-);
+
+    GameState.buildings.forEach(
+        building => {
+
+            renderables.push({
+
+                y:
+                    building.x +
+                    building.y,
+
+                draw: () => {
+
+                    building.draw(ctx);
+
+                }
+            });
+        }
+    );
+}
 
 function renderGround() {
 
@@ -62,7 +65,7 @@ function renderGround() {
 function renderCropPlots(renderables) {
 
     if (!GameState.cropPlots?.length) {
-    return;
+        return;
     }
 
     GameState.cropPlots.forEach(plot => {
@@ -136,7 +139,7 @@ function renderCropPlots(renderables) {
 function renderAnimals(renderables) {
 
     if (!GameState.animals?.length) {
-    return;
+        return;
     }
 
     GameState.animals.forEach(animal => {
@@ -163,59 +166,12 @@ function renderPlayer(renderables) {
 
     renderables.push({
 
-        y: player.x + player.y,
+        y: player.y + player.x,
 
         draw: () => {
 
-            const { isoX, isoY } =
-                toIso(player.x, player.y);
+            player.draw(ctx);
 
-            drawShadow(
-                ctx,
-                isoX,
-                isoY,
-                14,
-                7
-            );
-
-            const sprite =
-                Sprites["farmer"];
-
-            if (
-                sprite &&
-                sprite.complete &&
-                sprite.naturalWidth > 0
-            ) {
-
-                const bounce =
-                    player.isMoving
-                        ? Math.abs(
-                            Math.sin(
-                                player.animTimer * 4
-                            )
-                        ) * 3
-                        : 0;
-
-                ctx.drawImage(
-                    sprite,
-                    isoX - 16,
-                    isoY - 36 - bounce,
-                    32,
-                    36
-                );
-
-            } else {
-
-                ctx.fillStyle =
-                    "#0284c7";
-
-                ctx.fillRect(
-                    isoX - 8,
-                    isoY - 24,
-                    16,
-                    16
-                );
-            }
         }
     });
 }
@@ -233,17 +189,9 @@ export function draw() {
 
     const renderables = [];
 
-    renderables.push({
-
-        y: -10,
-
-        draw: () => {
-
-            drawMapObstacles(ctx);
-        }
-    });
-
     renderCropPlots(renderables);
+
+    renderBuildings(renderables);
 
     renderAnimals(renderables);
 
@@ -253,25 +201,30 @@ export function draw() {
         (a, b) => a.y - b.y
     );
 
+    renderables.forEach(r => {
+
+        if (r.draw) {
+
+            r.draw();
+        }
+
+    });
+
     renderables.forEach(
         r => r.draw()
     );
 
-    const nightAlpha =
-        Math.abs(
-            Math.sin(
-                (GameState.worldTime / DAY_LENGTH)
-                * Math.PI
-            )
-        ) * 0.45;
+    const nightAlpha = 0;
+}
 
-    ctx.fillStyle =
-        `rgba(15,23,42,${nightAlpha})`;
+export class Renderer {
 
-    ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
+    constructor() {
+
+    }
+
+    render() {
+
+        draw();
+    }
 }

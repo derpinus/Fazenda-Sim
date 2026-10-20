@@ -1,105 +1,270 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fazenda Sim - Mapa 24x24 v0.8</title>
+
+    <title>🌾 Fazenda Sim v0.8</title>
+
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
     <h1>🏰 Fazenda Sim - Mapa Expandido 24x24</h1>
 
     <div id="game-container">
-        <!-- Canvas alargado para suportar o mapa isométrico sem cortes -->
-        <canvas id="gameCanvas" width="1600" height="800"></canvas>
-        
+
+        <canvas id="gameCanvas" width="1600" height="800">
+        </canvas>
+
         <div id="ui">
             <div class="stat-group">
-                <div class="stat-item">💰 <span id="coins" style="color:#facc15">30</span></div>
-                <div class="stat-item">🎒 Max: <span id="maxCap">5</span></div>
+                <div class="stat-item">
+                    📅 Dia:
+                    <span id="day">1</span>
+                </div>
+
+                <div class="stat-item">
+                    🌦️
+                    <span id="season">
+                        Primavera
+                    </span>
+                </div>
             </div>
+
             <div class="stat-group">
-                <div class="stat-item">🌱 Sementes: <span id="seeds">4</span></div>
-                <div class="stat-item">🌾 Trigo: <span id="wheat">0</span></div>
+                <div class="stat-item">
+                    💰 <span id="coins">30</span>
+                </div>
+
+                <div class="stat-item">
+                    🎒 Max:
+                    <span id="maxCap">5</span>
+                </div>
             </div>
+
             <div class="stat-group">
-                <div class="stat-item">🥛 Leite: <span id="milk">0</span></div>
-                <div class="stat-item">🧶 Lã: <span id="wool">0</span></div>
-                <div class="stat-item">🧀 Queijo: <span id="cheese">0</span></div>
-                <div class="stat-item">🥚 Ovos: <span id="eggs">0</span></div>
+                <div class="stat-item">
+                    🌱 Sementes:
+                    <span id="seeds">4</span>
+                </div>
+
+                <div class="stat-item">
+                    🌾 Trigo:
+                    <span id="wheat">0</span>
+                </div>
             </div>
-            <div id="action-prompt" style="color: #fef08a; margin-top: 6px; font-weight: bold; text-align:center;"></div>
+
+            <div class="stat-group">
+
+                <div class="stat-item">
+                    🥛 Leite:
+                    <span id="milk">0</span>
+                </div>
+
+                <div class="stat-item">
+                    🧶 Lã:
+                    <span id="wool">0</span>
+                </div>
+
+                <div class="stat-item">
+                    🧀 Queijo:
+                    <span id="cheese">0</span>
+                </div>
+
+                <div class="stat-item">
+                    🥚 Ovos:
+                    <span id="eggs">0</span>
+                </div>
+
+            </div>
+
+            <div id="action-prompt" style="
+                    color:#fef08a;
+                    margin-top:6px;
+                    font-weight:bold;
+                    text-align:center;
+                ">
+            </div>
+
         </div>
 
-        <!-- Painel do Modo de Teste / Editor de Objetos (Sandbox) -->
-        <div id="test-sandbox-panel" style="position: absolute; top: 15px; right: 15px; background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; padding: 12px; border-radius: 10px; color: white; font-family: sans-serif; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-            <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #4ade80; text-align: center;">🧪 Sandbox / Editor</h4>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 12px;">
-                <button onclick="setSandboxTool('cow')" id="btn-cow" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐄 Vaca</button>
-                <button onclick="setSandboxTool('sheep')" id="btn-sheep" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐑 Ovelha</button>
-                <button onclick="setSandboxTool('chicken')" id="btn-chicken" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐔 Galinha</button>
-                <button onclick="setSandboxTool('horse')" id="btn-horse" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🐎 Cavalo</button>
-                <button onclick="setSandboxTool('market')" id="btn-market" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🏪 Mercado</button>
-                <button onclick="setSandboxTool('cheesePress')" id="btn-cheesePress" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🧀 Prensa</button>
-                <button onclick="setSandboxTool('plot')" id="btn-plot" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🌱 Canteiro</button>
-                <button onclick="setSandboxTool('pasture')" id="btn-pasture" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🌿 Capim</button>
-                <button onclick="setSandboxTool('corn')" id="btn-corn" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🌽 Milho</button>
-                <button onclick="setSandboxTool('obstacle')" id="btn-obstacle" style="background: #334155; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;">🪨 Rocha</button>
+        <!-- SANDBOX -->
+
+        <div id="test-sandbox-panel" style="
+                position:absolute;
+                top:15px;
+                right:15px;
+                background:rgba(15,23,42,.9);
+                border:2px solid #334155;
+                padding:12px;
+                border-radius:10px;
+                color:white;
+                font-family:sans-serif;
+                z-index:1000;
+            ">
+
+            <h4 style="
+                    margin:0 0 8px 0;
+                    color:#4ade80;
+                    text-align:center;
+                ">
+                🧪 Sandbox / Editor
+            </h4>
+
+            <div style="
+                    display:grid;
+                    grid-template-columns:repeat(2,1fr);
+                    gap:6px;
+                ">
+
+                <button onclick="setSandboxTool('cow')">🐄 Vaca</button>
+                <button onclick="setSandboxTool('sheep')">🐑 Ovelha</button>
+
+                <button onclick="setSandboxTool('chicken')">🐔 Galinha</button>
+                <button onclick="setSandboxTool('horse')">🐎 Cavalo</button>
+
+                <button onclick="setSandboxTool('market')">🏪 Mercado</button>
+                <button onclick="setSandboxTool('cheesePress')">🧀 Prensa</button>
+
+                <button onclick="setSandboxTool('plot')">🌱 Canteiro</button>
+                <button onclick="setSandboxTool('pasture')">🌿 Pasto</button>
+
+                <button onclick="setSandboxTool('corn')">🌽 Milho</button>
+                <button onclick="setSandboxTool('obstacle')">🪨 Rocha</button>
+
             </div>
-            <button onclick="setSandboxTool('remove')" id="btn-remove" style="width: 100%; margin-top: 8px; background: #991b1b; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️ Ferramenta Remover</button>
-            <div id="current-tool-label" style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 6px;">Ferramenta Ativa: Nenhum</div>
+
+            <button onclick="setSandboxTool('remove')" id="btn-remove" style="
+                    width:100%;
+                    margin-top:8px;
+                    background:#991b1b;
+                    color:white;
+                    border:none;
+                    padding:6px;
+                    border-radius:4px;
+                ">
+                🗑 Ferramenta Remover
+            </button>
+
+            <div id="current-tool-label" style="
+                    text-align:center;
+                    margin-top:6px;
+                ">
+                Ferramenta Ativa: Nenhum
+            </div>
+
         </div>
 
-        <!-- Loja Modal -->
+        <!-- SHOP -->
+
         <div id="shop-modal">
+
             <h2>🛒 Mercado da Vila</h2>
+
             <div class="shop-item">
                 <span>🌱 Semente de Trigo</span>
                 <button onclick="buyItem('seed', 5)">$5</button>
             </div>
+
             <div class="shop-item">
                 <span>🎒 Expansão de Mochila (+5)</span>
-                <button onclick="buyItem('bag', 100)">$100</button>
+                <button onclick="buyItem('bag', 100)">
+                    $100
+                </button>
             </div>
+
             <div class="shop-item">
                 <span>🐄 Vaca Leiteira</span>
-                <button onclick="buyItem('cow', 150)">$150</button>
+                <button onclick="buyItem('cow',150)">
+                    $150
+                </button>
             </div>
+
             <div class="shop-item">
-                <span>🐑 Ovelha (Produz Lã)</span>
-                <button onclick="buyItem('sheep', 120)">$120</button>
+                <span>🐑 Ovelha</span>
+                <button onclick="buyItem('sheep',120)">
+                    $120
+                </button>
             </div>
+
             <div class="shop-item">
-                <span>🐓 Galinha Botadeira</span>
-                <button onclick="buyItem('chicken', 80)">$80</button>
+                <span>🐔 Galinha</span>
+                <button onclick="buyItem('chicken',80)">
+                    $80
+                </button>
             </div>
+
             <div class="shop-item">
-                <span>🐎 Cavalo de Raça</span>
-                <button onclick="buyItem('horse', 250)">$250</button>
+                <span>🐎 Cavalo</span>
+                <button onclick="buyItem('horse',250)">
+                    $250
+                </button>
             </div>
-            <div class="shop-item" style="border-top: 1px solid #334155; padding-top: 10px;">
-                <span>🪙 Vender Colheita/Produtos</span>
-                <button onclick="sellAll()" style="background: #2563eb;">VENDER TUDO</button>
+
+            <div class="shop-item" style="
+                    border-top:1px solid #334155;
+                    padding-top:10px;
+                ">
+
+                <span>🪙 Vender Produtos</span>
+
+                <button onclick="sellAll()" style="
+                        background:#2563eb;
+                    ">
+                    VENDER TUDO
+                </button>
+
             </div>
-            <button class="close-btn" onclick="closeShop()">Fechar (ESC)</button>
+
+            <button class="close-btn" onclick="closeShop()">
+                Fechar (ESC)
+            </button>
+
         </div>
+
     </div>
 
     <div id="controls-hint">
-        🎮 <b>Mover:</b> WASD / Setas | <b>Interagir:</b> ESPAÇO | <b>Mercado:</b> Tecla E
+
+        🎮
+        <b>Mover:</b> WASD / Setas |
+        <b>Interagir:</b> ESPAÇO |
+        <b>Mercado:</b> E
+
     </div>
 
-    <!-- Ordem correta e segura de carregamento dos módulos JS -->
-    <script src="js/engine.js"></script>
-    <script src="js/physics.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/player.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/animal.js"></script>
-    <script src="js/sandbox.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/renderer.js"></script>
-    <script src="js/main.js"></script>
+    <!-- Debug Save -->
+
+    <div style="
+            position:fixed;
+            bottom:10px;
+            right:10px;
+            display:flex;
+            gap:5px;
+            z-index:9999;
+        ">
+
+        <button onclick="saveGame()">
+            💾 Salvar
+        </button>
+
+        <button onclick="loadGame()">
+            📂 Carregar
+        </button>
+
+        <button onclick="deleteSave()">
+            🗑 Apagar
+        </button>
+
+    </div>
+
+    <!-- ENTRADA ÚNICA DO JOGO -->
+
+    <script type="module" src="main.js"></script>
+
 </body>
+
 </html>

@@ -20,11 +20,20 @@ export class SaveManager {
 
             player: GameState.player,
 
-            animals: GameState.animals,
+            animals:
+                GameState.animals.map(
+                    animal => animal.serialize()
+                ),
 
-            cropPlots: GameState.cropPlots,
+            cropPlots:
+                GameState.cropPlots.map(
+                    plot => plot.serialize()
+                ),
 
-            buildings: GameState.buildings,
+            buildings:
+                GameState.buildings.map(
+                    building => building.serialize()
+                ),
 
             inventory: GameState.inventory
                 ? GameState.inventory.getAll()

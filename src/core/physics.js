@@ -1,4 +1,8 @@
 // Gestão do Grid do Mapa, Obstáculos, Pastagens e Sistema de Colisão Física Global
+import {
+    MAP_SIZE
+} from "./config.js";
+
 
 const mapGrid = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(null));
 let mapObstacles = [];
