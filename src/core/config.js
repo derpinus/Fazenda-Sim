@@ -1,4 +1,4 @@
-export const MAP_SIZE = 24;
+export const MAP_SIZE = 64;
 
 export const TILE_WIDTH = 64;
 

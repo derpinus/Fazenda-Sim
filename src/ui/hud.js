@@ -7,6 +7,8 @@ export class HUD {
         this.updateMoney();
         this.updateInventory();
         this.updateDayInfo();
+        this.updateWorldProgress();
+        this.setValue("maxCap", GameState.inventoryCapacity);
     }
 
     updateMoney() {
@@ -54,6 +56,9 @@ export class HUD {
             "eggs",
             inventory.egg || 0
         );
+        this.setValue("wood", inventory.wood || 0);
+        this.setValue("stone", inventory.stone || 0);
+        this.setValue("water", inventory.water || 0);
     }
 
     updateDayInfo() {
@@ -65,6 +70,37 @@ export class HUD {
 
         day.textContent =
             GameState.day;
+
+        const season = document.getElementById("season");
+
+        if (season) {
+            season.textContent = GameState.mode === "creative"
+                ? `Criativo · ${GameState.worldSeed}`
+                : "Primavera";
+        }
+    }
+
+    updateWorldProgress() {
+        const mode = document.getElementById("world-mode");
+        const count = document.getElementById("world-guidance");
+        const message = document.getElementById("action-message");
+
+        if (mode) {
+            mode.textContent = GameState.mode === "creative"
+                ? "Modo Criativo · recursos livres"
+                : "Modo Aventura";
+        }
+
+        if (count) {
+            const exploredCount = GameState.exploredTiles
+                ?.reduce((total, column) => total + column.filter(Boolean).length, 0) ?? 0;
+            const mapSize = GameState.world?.tiles.length ?? 1;
+            count.textContent = `Mapa revelado: ${Math.floor(exploredCount / (mapSize * mapSize) * 100)}%`;
+        }
+
+        if (message) {
+            message.textContent = GameState.actionMessage;
+        }
     }
 
     setValue(id, value) {

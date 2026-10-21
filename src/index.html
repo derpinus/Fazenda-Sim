@@ -5,80 +5,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>🌾 Fazenda Sim v0.8</title>
+    <title>Fazenda dos Sonhos</title>
 
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-    <h1>🏰 Fazenda Sim - Mapa Expandido 24x24</h1>
-
     <div id="game-container">
 
-        <canvas id="gameCanvas" width="1600" height="800">
+        <canvas id="gameCanvas" width="1600" height="900">
         </canvas>
 
+        <section id="welcome-screen" aria-labelledby="welcome-title">
+            <div class="welcome-card">
+                <p class="welcome-eyebrow">UM LUGAR SÓ SEU</p>
+                <h2 id="welcome-title">Fazenda dos Sonhos</h2>
+                <p class="welcome-copy">Explore um vasto território coberto pela neblina, reúna recursos e expanda sua fazenda.</p>
+
+                <label for="world-seed">Semente do mundo</label>
+                <div class="seed-row">
+                    <input id="world-seed" value="Fazenda 2026" maxlength="24">
+                    <button type="button" class="seed-random" onclick="randomizeSeed()" aria-label="Gerar outra semente">↻</button>
+                </div>
+
+                <div class="mode-cards">
+                    <button type="button" class="mode-card adventure-card" onclick="startNewGame('adventure')">
+                        <span class="mode-icon">🧭</span>
+                        <strong>Aventura</strong>
+                        <span>Explore o território e cuide da fazenda.</span>
+                    </button>
+                    <button type="button" class="mode-card creative-card" onclick="startNewGame('creative')">
+                        <span class="mode-icon">🎨</span>
+                        <strong>Criativo</strong>
+                        <span>Crie livremente, sem limites de recursos.</span>
+                    </button>
+                </div>
+
+                <button type="button" id="continue-game" class="continue-button" onclick="continueGame()">Continuar fazenda salva</button>
+            </div>
+        </section>
+
         <div id="ui">
-            <div class="stat-group">
-                <div class="stat-item">
-                    📅 Dia:
-                    <span id="day">1</span>
+            <div class="hud-topline">
+                <button type="button" id="hud-toggle" aria-label="Recolher painel" aria-expanded="true" onclick="toggleHud()">−</button>
+                <div class="day-emblem">☀</div>
+                <div class="day-copy">
+                    <strong>Dia <span id="day">1</span></strong>
+                    <span id="season">Primavera</span>
                 </div>
-
                 <div class="stat-item">
-                    🌦️
-                    <span id="season">
-                        Primavera
-                    </span>
+                    <span class="stat-icon">◉</span>
+                    <span id="coins">100</span>
                 </div>
-            </div>
-
-            <div class="stat-group">
                 <div class="stat-item">
-                    💰 <span id="coins">30</span>
-                </div>
-
-                <div class="stat-item">
-                    🎒 Max:
-                    <span id="maxCap">5</span>
+                    <span class="stat-icon">♥</span>
+                    Max: <span id="maxCap">5</span>
                 </div>
             </div>
 
-            <div class="stat-group">
+            <div class="stat-group resource-group">
                 <div class="stat-item">
-                    🌱 Sementes:
+                    <span class="resource-icon">♣</span>
+                    Sementes
                     <span id="seeds">4</span>
                 </div>
-
                 <div class="stat-item">
-                    🌾 Trigo:
+                    <span class="resource-icon">✿</span>
+                    Trigo
                     <span id="wheat">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">▯</span>
+                    Leite
+                    <span id="milk">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">◆</span>
+                    Queijo
+                    <span id="cheese">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">●</span>
+                    Ovos
+                    <span id="eggs">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">♧</span>
+                    Lã
+                    <span id="wool">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">🪵</span>
+                    Madeira
+                    <span id="wood">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">🪨</span>
+                    Pedra
+                    <span id="stone">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="resource-icon">💧</span>
+                    Água
+                    <span id="water">0</span>
                 </div>
             </div>
 
-            <div class="stat-group">
-
-                <div class="stat-item">
-                    🥛 Leite:
-                    <span id="milk">0</span>
-                </div>
-
-                <div class="stat-item">
-                    🧶 Lã:
-                    <span id="wool">0</span>
-                </div>
-
-                <div class="stat-item">
-                    🧀 Queijo:
-                    <span id="cheese">0</span>
-                </div>
-
-                <div class="stat-item">
-                    🥚 Ovos:
-                    <span id="eggs">0</span>
-                </div>
-
+            <div id="world-progress">
+                <span>✦ <span id="world-guidance">Explore e reúna recursos</span></span>
+                <span id="action-message"></span>
             </div>
 
             <div id="action-prompt" style="
@@ -87,8 +123,63 @@
                     font-weight:bold;
                     text-align:center;
                 ">
-            </div>
+                    Plante e alimente: F
+                </div>
 
+        </div>
+
+        <section id="worker-panel" aria-label="Trabalhadores" hidden>
+            <strong>Trabalhadores</strong>
+            <p>Selecione no mapa ou na lista; depois escolha uma ordem e clique no alvo.</p>
+            <div id="worker-list"></div>
+            <div class="worker-actions">
+                <button type="button" data-worker-action="move">Mover</button>
+                <button type="button" data-worker-action="collect">Coletar</button>
+                <button type="button" data-worker-action="harvest">Colher</button>
+            </div>
+            <span id="worker-status" role="status">Selecione um trabalhador no mapa.</span>
+        </section>
+
+        <div id="game-actions" aria-label="Ações do jogo">
+            <button type="button" aria-label="Configurações">⚙</button>
+            <button type="button" aria-label="Mapa">▣</button>
+            <button type="button" aria-label="Mochila">▤</button>
+        </div>
+
+        <div id="quick-toolbar" aria-label="Ferramentas rápidas">
+            <button type="button" aria-label="Mochila">▤</button>
+            <button type="button" aria-label="Plantar">♣</button>
+            <button type="button" aria-label="Ferramentas">⚒</button>
+            <button type="button" aria-label="Mapa">▣</button>
+            <button type="button" aria-label="Diário">▥</button>
+            <button type="button" id="build-toggle" aria-label="Construir" onclick="toggleBuildMenu()">🏗</button>
+        </div>
+
+        <section id="build-menu" aria-label="Construções" hidden>
+            <strong>Construir</strong>
+            <p>Desenhe cercas por trechos; combine as duas direções para montar qualquer formato e instale uma porteira.</p>
+            <div class="build-options">
+                <button type="button" onclick="selectBuildTool('pen')">🐄 Curral</button>
+                <button type="button" onclick="selectBuildTool('fenceX')">🪵 Cerca ↗</button>
+                <button type="button" onclick="selectBuildTool('fenceY')">🪵 Cerca ↘</button>
+                <button type="button" onclick="selectBuildTool('gateX')">🚪 Porteira ↗</button>
+                <button type="button" onclick="selectBuildTool('gateY')">🚪 Porteira ↘</button>
+                <button type="button" onclick="selectBuildTool('barn')">🏠 Celeiro</button>
+                <button type="button" onclick="selectBuildTool('well')">💧 Poço</button>
+                <button type="button" onclick="selectBuildTool('silo')">🌾 Silo</button>
+                <button type="button" onclick="selectBuildTool('farmhouse')">🏡 Casa</button>
+                <button type="button" onclick="selectBuildTool('cheesePress')">🧀 Queijaria</button>
+                <button type="button" onclick="selectBuildTool('chickenCoop')">🐔 Galinheiro</button>
+                <button type="button" onclick="selectBuildTool('stable')">🐎 Estábulo</button>
+                <button type="button" onclick="selectBuildTool('demolish')">🧨 Demolir</button>
+                <button type="button" onclick="selectBuildTool('cancel')">Cancelar</button>
+            </div>
+            <span id="build-status" role="status">Escolha uma construção.</span>
+        </section>
+
+        <div id="mini-map-wrap">
+            <canvas id="mini-map" width="144" height="144" aria-label="Minimapa do território"></canvas>
+            <div class="world-clock"><span>☀</span><span>08:30</span></div>
         </div>
 
         <!-- SANDBOX -->
@@ -104,6 +195,7 @@
                 color:white;
                 font-family:sans-serif;
                 z-index:1000;
+                display:none;
             ">
 
             <h4 style="
@@ -111,7 +203,7 @@
                     color:#4ade80;
                     text-align:center;
                 ">
-                🧪 Sandbox / Editor
+                🎨 Oficina Criativa
             </h4>
 
             <div style="
@@ -153,7 +245,7 @@
                     text-align:center;
                     margin-top:6px;
                 ">
-                Ferramenta Ativa: Nenhum
+                Clique no mapa para construir
             </div>
 
         </div>
@@ -219,6 +311,8 @@
 
             </div>
 
+            <p id="shop-status" role="status"></p>
+
             <button class="close-btn" onclick="closeShop()">
                 Fechar (ESC)
             </button>
@@ -232,17 +326,21 @@
         🎮
         <b>Mover:</b> WASD / Setas |
         <b>Interagir:</b> ESPAÇO |
+        <b>Correr:</b> SHIFT |
+        <b>Plantar/alimentar:</b> F |
+        <b>Dar água:</b> G |
         <b>Mercado:</b> E
 
     </div>
 
     <!-- Debug Save -->
 
-    <div style="
+    <div id="save-controls" style="
             position:fixed;
             bottom:10px;
             right:10px;
             display:flex;
+            display:none;
             gap:5px;
             z-index:9999;
         ">

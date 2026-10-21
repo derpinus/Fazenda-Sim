@@ -1,39 +1,79 @@
 export class Engine {
     constructor({
         renderer,
-        systems = []
+        systems = [],
+        requestFrame = callback => requestAnimationFrame(callback),
+        cancelFrame = frameId => cancelAnimationFrame(frameId)
     }) {
         this.renderer = renderer;
         this.systems = systems;
+        this.requestFrame = requestFrame;
+        this.cancelFrame = cancelFrame;
 
-        this.lastTime = 0;
+        this.fixedDelta = 1 / 60;
+        this.maxFrameDelta = 0.1;
+        this.maxStepsPerFrame = 6;
+        this.accumulator = 0;
+        this.lastTime = null;
         this.running = false;
+        this.frameRequest = null;
+        this.boundLoop = timestamp => this.loop(timestamp);
     }
 
     start() {
+        if (this.running) return;
         this.running = true;
-        requestAnimationFrame(this.loop.bind(this));
+        this.lastTime = null;
+        this.accumulator = 0;
+        this.frameRequest = this.requestFrame(this.boundLoop);
     }
 
     stop() {
         this.running = false;
+        if (this.frameRequest !== null) {
+            this.cancelFrame(this.frameRequest);
+            this.frameRequest = null;
+        }
+        this.lastTime = null;
+        this.accumulator = 0;
     }
 
     loop(timestamp) {
         if (!this.running) return;
+        this.frameRequest = null;
 
-        const deltaTime =
-            (timestamp - this.lastTime) / 1000;
-
+        if (this.lastTime === null) {
+            this.lastTime = timestamp;
+            this.render();
+            this.frameRequest = this.requestFrame(this.boundLoop);
+            return;
+        }
+        const frameDelta = Math.min(
+            Math.max((timestamp - this.lastTime) / 1000, 0),
+            this.maxFrameDelta
+        );
         this.lastTime = timestamp;
+        this.accumulator += frameDelta;
 
-        this.update(deltaTime);
+        let steps = 0;
+        while (
+            this.running &&
+            this.accumulator + 1e-10 >= this.fixedDelta &&
+            steps < this.maxStepsPerFrame
+        ) {
+            this.update(this.fixedDelta);
+            if (!this.running) return;
+            this.accumulator = Math.max(
+                0,
+                this.accumulator - this.fixedDelta
+            );
+            steps++;
+        }
 
         this.render();
-
-        requestAnimationFrame(
-            this.loop.bind(this)
-        );
+        if (this.running) {
+            this.frameRequest = this.requestFrame(this.boundLoop);
+        }
     }
 
     update(deltaTime) {

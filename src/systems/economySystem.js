@@ -11,6 +11,10 @@ export class EconomySystem {
 
     spendMoney(value) {
 
+        if (this.gameState.mode === "creative") {
+            return true;
+        }
+
         if (this.gameState.money < value) {
             return false;
         }

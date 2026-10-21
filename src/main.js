@@ -17,6 +17,13 @@ import { Player } from "./entities/player.js";
 import { Animal } from "./entities/animal.js";
 import { Building } from "./entities/building.js";
 import { CropPlot } from "./entities/cropPlot.js";
+import { SoundManager } from "./core/soundManager.js";
+import { MAP_SIZE } from "./core/config.js";
+import { generateWorld } from "./core/worldGenerator.js";
+import { WorldMapSystem } from "./systems/worldMapSystem.js";
+import { WorkerSystem } from "./systems/workerSystem.js";
+import "./systems/constructionSystem.js";
+import "./ui/shopUI.js";
 
 GameState.inventory =
     new Inventory();
@@ -35,16 +42,29 @@ const farmingSystem =
     new FarmingSystem();
 
 const animalSystem =
-    new AnimalSystem();
+    new AnimalSystem(GameState);
 
 const economySystem =
     new EconomySystem(GameState);
 
+const soundManager =
+    new SoundManager();
+
 const interactionSystem =
-    new InteractionSystem(GameState);
+    new InteractionSystem(
+        GameState,
+        soundManager,
+        farmingSystem,
+        animalSystem
+    );
 
 const dayNightSystem =
     new DayNightSystem();
+
+const worldMapSystem =
+    new WorldMapSystem();
+
+const workerSystem = new WorkerSystem();
 
 const engine =
     new Engine({
@@ -57,6 +77,8 @@ const engine =
             economySystem,
             interactionSystem,
             dayNightSystem,
+            worldMapSystem,
+            workerSystem,
             hud,
             inputSystem
         ]
@@ -67,110 +89,126 @@ window.saveGame = () =>
     saveManager.save();
 
 window.loadGame = () =>
-    saveManager.load();
+    window.continueGame();
 
 window.deleteSave = () =>
     saveManager.deleteSave();
 
 function initializeWorld() {
 
-    // Limpa estado anterior
-
     GameState.animals = [];
+    GameState.workers = [];
+    GameState.selectedWorkerId = null;
+    GameState.workerCommand = null;
     GameState.cropPlots = [];
     GameState.buildings = [];
+    GameState.exploredTiles = [];
+    GameState.visibleTiles = [];
+    GameState.buildPreview = null;
+    GameState.actionMessage = "";
+    GameState.day = 1;
+    GameState.season = "spring";
+    GameState.worldTime = 0;
+    GameState.inventoryCapacity = 5;
+    GameState.inventory = new Inventory();
+    GameState.world = generateWorld(GameState.worldSeed);
+    GameState.money = GameState.mode === "creative" ? 999999 : 100;
 
-    // Jogador
-
-    GameState.player =
-        new Player(12, 12);
-
-    // Animais
-
+    const scale = MAP_SIZE / 24;
+    GameState.player = new Player(12 * scale, 13 * scale);
+    workerSystem.createStartingWorkers();
+    worldMapSystem.update();
     GameState.animals.push(
-
-        new Animal(
-            "chicken",
-            10,
-            10
-        )
-
+        new Animal("chicken", 10.5 * scale, 14 * scale),
+        new Animal("chicken", 11.5 * scale, 14.5 * scale),
+        new Animal("cow", 10.5 * scale, 15.2 * scale)
     );
-
-    // Construções
-
     GameState.buildings.push(
-
-        new Building(
-            "market",
-            15,
-            10
-        )
-
+        new Building("farmhouse", 10.5 * scale, 12 * scale),
+        new Building("barn", 14 * scale, 12 * scale),
+        new Building("market", 15 * scale, 14 * scale),
+        new Building("cheesePress", 14.5 * scale, 14.5 * scale)
     );
 
-    GameState.buildings.push(
+    for (let x = 10 * scale; x <= 13 * scale; x++) {
+        for (let y = 11 * scale; y <= 13 * scale; y++) {
+            const cropPlot = new CropPlot(
+                x === 13 * scale && y === 13 * scale ? "corn" : "wheat",
+                x + 0.25,
+                y + 0.25
+            );
 
-        new Building(
-            "cheesePress",
-            18,
-            10
-        )
+            if (
+                Math.floor(x) === Math.floor(11 * scale) &&
+                Math.floor(y) === Math.floor(12 * scale)
+            ) {
+                cropPlot.state = "ready";
+                cropPlot.ready = true;
+            } else {
+                cropPlot.state = "growing";
+                cropPlot.growth = (x + y) % 12;
+                cropPlot.growthTime = 35;
+            }
 
-    );
-
-    // Plantações
-
-    const wheatPlot =
-        new CropPlot(
-            "wheat",
-            8,
-            8
-        );
-
-    wheatPlot.state = "ready";
-
-    GameState.cropPlots.push(
-        wheatPlot
-    );
-
-    console.log(
-        "✅ Mundo inicial carregado"
-    );
-}
-
-window.addEventListener(
-    "keydown",
-    (e) => {
-
-        if (!GameState.player) {
-            return;
-        }
-
-        switch (e.code) {
-
-            case "Space":
-
-                GameState.player.interactPressed = true;
-
-                break;
+            GameState.cropPlots.push(cropPlot);
         }
     }
-);
+
+    if (GameState.mode === "creative") {
+        GameState.inventory.add("seed", 999);
+        GameState.inventory.add("wheat", 999);
+        GameState.inventory.add("milk", 999);
+        GameState.inventory.add("egg", 999);
+        GameState.inventory.add("corn", 999);
+        GameState.inventory.add("wood", 999);
+        GameState.inventory.add("stone", 999);
+        GameState.inventory.add("water", 999);
+    }
+}
+
+function enterGame() {
+    document.getElementById("welcome-screen").style.display = "none";
+    document.getElementById("save-controls").style.display = "flex";
+    document.getElementById("test-sandbox-panel").style.display =
+        GameState.mode === "creative" ? "block" : "none";
+    document.getElementById("worker-panel").hidden = false;
+    workerSystem.updatePanel();
+}
+
+window.startNewGame = (mode) => {
+    const seedInput = document.getElementById("world-seed");
+    GameState.mode = mode === "creative" ? "creative" : "adventure";
+    GameState.worldSeed = seedInput.value.trim() || "Fazenda dos Sonhos";
+    initializeWorld();
+    enterGame();
+};
+
+window.continueGame = () => {
+    if (!saveManager.load()) {
+        return;
+    }
+
+    enterGame();
+};
+
+window.randomizeSeed = () => {
+    document.getElementById("world-seed").value =
+        `Fazenda ${Math.floor(Math.random() * 900000) + 100000}`;
+};
+
+window.toggleHud = () => {
+    const hud = document.getElementById("ui");
+    const button = document.getElementById("hud-toggle");
+    const collapsed = hud.classList.toggle("hud-collapsed");
+    button.textContent = collapsed ? "+" : "−";
+    button.setAttribute("aria-expanded", String(!collapsed));
+    button.setAttribute("aria-label", collapsed ? "Expandir painel" : "Recolher painel");
+};
 
 if (saveManager.hasSave()) {
-
-    saveManager.load();
-
-    console.log(
-        "📂 Save carregado"
-    );
-
-} else {
-
-    initializeWorld();
-
+    document.getElementById("continue-game").style.display = "block";
 }
+
 window.GameState = GameState;
 
 engine.start();

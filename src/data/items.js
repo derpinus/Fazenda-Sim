@@ -26,5 +26,19 @@ export const ItemData = {
         name: "Queijo",
         sellPrice: 40,
         stackSize: 99
+    },
+
+    wheat: {
+        id: "wheat",
+        name: "Trigo",
+        sellPrice: 6,
+        stackSize: 99
+    },
+
+    wool: {
+        id: "wool",
+        name: "Lã",
+        sellPrice: 12,
+        stackSize: 99
     }
 };

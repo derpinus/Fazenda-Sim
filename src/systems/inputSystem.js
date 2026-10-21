@@ -1,5 +1,5 @@
 import { GameState } from "../managers/gameState.js";
-import { MAP_SIZE } from "../core/config.js";
+import { moveWithCollision } from "../core/worldCollision.js";
 
 export class InputSystem {
 
@@ -22,6 +22,25 @@ export class InputSystem {
 
         this.keys[event.code] = true;
 
+        if (
+            [
+                "ArrowUp",
+                "ArrowDown",
+                "ArrowLeft",
+                "ArrowRight",
+                "Space"
+            ].includes(event.code)
+        ) {
+            event.preventDefault();
+        }
+
+        if (
+            event.repeat &&
+            ["Space", "KeyE", "KeyI", "KeyF", "KeyG"].includes(event.code)
+        ) {
+            return;
+        }
+
         const player = GameState.player;
 
         if (!player) return;
@@ -42,6 +61,16 @@ export class InputSystem {
 
                 player.inventoryPressed = true;
                 break;
+
+            case "KeyF":
+
+                player.farmPressed = true;
+                break;
+
+            case "KeyG":
+
+                player.waterPressed = true;
+                break;
         }
     }
 
@@ -60,8 +89,6 @@ export class InputSystem {
         const player = GameState.player;
 
         if (!player) return;
-
-        const speed = 4 * deltaTime;
 
         let moveX = 0;
         let moveY = 0;
@@ -94,68 +121,73 @@ export class InputSystem {
             moveX += 1;
         }
 
-        const length =
-            Math.hypot(
-                moveX,
-                moveY
-            );
+        const inputLength = Math.hypot(moveX, moveY);
 
-        if (length > 0) {
+        if (inputLength > 0) {
+            moveX /= inputLength;
+            moveY /= inputLength;
+            const topSpeed = this.keys["ShiftLeft"] || this.keys["ShiftRight"]
+                ? player.runSpeed
+                : player.maxSpeed;
 
-            moveX /= length;
-            moveY /= length;
+            player.vx += moveX * player.acceleration * deltaTime;
+            player.vy += moveY * player.acceleration * deltaTime;
+            const speed = Math.hypot(player.vx, player.vy);
 
-            player.x +=
-                moveX * speed;
+            if (speed > topSpeed) {
+                player.vx = player.vx / speed * topSpeed;
+                player.vy = player.vy / speed * topSpeed;
+            }
 
-            player.y +=
-                moveY * speed;
-
-            player.isMoving = true;
-
-            player.animTimer +=
-                deltaTime * 6;
-
+            player.direction = this.getDirection(moveX, moveY);
         } else {
+            const drag = Math.exp(-player.drag * deltaTime);
+            player.vx *= drag;
+            player.vy *= drag;
 
-            player.isMoving = false;
-
-        }
-
-        // Limites do mapa
-
-        player.x = Math.max(
-            0.5,
-            Math.min(
-                MAP_SIZE - 0.5,
-                player.x
-            )
-        );
-
-        player.y = Math.max(
-            0.5,
-            Math.min(
-                MAP_SIZE - 0.5,
-                player.y
-            )
-        );
-
-        // Direção para sprites futuros
-
-        if (moveX !== 0 || moveY !== 0) {
-
-            if (moveX > 0 && moveY < 0) {
-                player.direction = "east";
-            }
-            else if (moveX < 0 && moveY > 0) {
-                player.direction = "west";
-            }
-            else if (moveX < 0 && moveY < 0) {
-                player.direction = "north";
-            }
-            else if (moveX > 0 && moveY > 0) {
-                player.direction = "south";
+            if (Math.hypot(player.vx, player.vy) < 0.04) {
+                player.vx = 0;
+                player.vy = 0;
             }
         }
+
+        const nextX = player.x + player.vx * deltaTime;
+        const nextY = player.y + player.vy * deltaTime;
+        const previousX = player.x;
+        const previousY = player.y;
+        const moved = moveWithCollision(
+            player,
+            nextX,
+            nextY,
+            0.24
+        );
+
+        if (Math.abs(player.x - nextX) > 0.0001) {
+            player.vx = 0;
+        }
+
+        if (Math.abs(player.y - nextY) > 0.0001) {
+            player.vy = 0;
+        }
+
+        const actualSpeed = Math.hypot(player.vx, player.vy);
+        player.isMoving = moved && actualSpeed > 0.12;
+
+        if (!moved && inputLength > 0) {
+            player.vx *= 0.2;
+            player.vy *= 0.2;
+        }
+
+        if (player.isMoving) {
+            player.animTimer += deltaTime * (actualSpeed > player.maxSpeed ? 13 : 9);
+        }
+    }
+
+    getDirection(x, y) {
+        if (Math.abs(x) > Math.abs(y)) {
+            return x > 0 ? "east" : "west";
+        }
+
+        return y > 0 ? "south" : "north";
     }
 }
